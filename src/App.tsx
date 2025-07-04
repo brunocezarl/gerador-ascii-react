@@ -39,89 +39,6 @@ const PatternGenerator = () => {
     custom: characters
   };
 
-  // Função para criar bitmap das letras
-  const createTextBitmap = (text: string, scale: number) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) return [];
-    
-    const fontSize = scale * 6;
-    ctx.font = `bold ${fontSize}px monospace`;
-    const metrics = ctx.measureText(text);
-    
-    canvas.width = Math.ceil(metrics.width) + 20;
-    canvas.height = fontSize + 20;
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = 'black';
-    ctx.font = `bold ${fontSize}px monospace`;
-    ctx.textBaseline = 'top';
-    ctx.fillText(text, 10, 10);
-    
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const bitmap = [];
-    
-    for (let y = 0; y < canvas.height; y++) {
-      const row = [];
-      for (let x = 0; x < canvas.width; x++) {
-        const index = (y * canvas.width + x) * 4;
-        const r = imageData.data[index];
-        const g = imageData.data[index + 1];
-        const b = imageData.data[index + 2];
-        const brightness = (r + g + b) / 3;
-        row.push(brightness < 128 ? 1 : 0); // 1 para preto (letra), 0 para branco
-      }
-      bitmap.push(row);
-    }
-    
-    return bitmap;
-  };
-
-  // Função para verificar se um ponto está dentro do texto
-  const isInsideText = (x: number, y: number, textBitmap: number[][], offsetX: number, offsetY: number) => {
-    const bitmapX = Math.floor(x - offsetX);
-    const bitmapY = Math.floor(y - offsetY);
-    
-    if (bitmapY >= 0 && bitmapY < textBitmap.length && 
-        bitmapX >= 0 && bitmapX < textBitmap[0].length) {
-      return textBitmap[bitmapY][bitmapX] === 1;
-    }
-    return false;
-  };
-
-  // Função para calcular distância até a borda da letra
-  const distanceToTextEdge = (x: number, y: number, textBitmap: number[][], offsetX: number, offsetY: number) => {
-    const bitmapX = Math.floor(x - offsetX);
-    const bitmapY = Math.floor(y - offsetY);
-    
-    if (bitmapY < 0 || bitmapY >= textBitmap.length || 
-        bitmapX < 0 || bitmapX < textBitmap[0].length) {
-      return 100; // Muito longe
-    }
-    
-    let minDist = 100;
-    const searchRadius = textThickness;
-    
-    for (let dy = -searchRadius; dy <= searchRadius; dy++) {
-      for (let dx = -searchRadius; dx <= searchRadius; dx++) {
-        const checkY = bitmapY + dy;
-        const checkX = bitmapX + dx;
-        
-        if (checkY >= 0 && checkY < textBitmap.length && 
-            checkX >= 0 && checkX < textBitmap[0].length) {
-          if (textBitmap[checkY][checkX] === 1) {
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            minDist = Math.min(minDist, dist);
-          }
-        }
-      }
-    }
-    
-    return minDist;
-  };
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [mouseDown, setMouseDown] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#F0EEE6');
@@ -202,7 +119,6 @@ const PatternGenerator = () => {
       const dy = y - cy;
       
       // Padrão de pontos em expansão com distorção óptica
-      const dist = Math.sqrt(dx * dx + dy * dy);
       const angle = Math.atan2(dy, dx);
       
       // Criar efeito de pontos em grade distorcida
@@ -365,7 +281,6 @@ const PatternGenerator = () => {
       
       const phi = (1 + Math.sqrt(5)) / 2;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
       
       // Número de pétalas baseado em Fibonacci (tipicamente 5, 8, 13, 21...)
       const petals = 13;
