@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
 
 // Definindo os tipos para os parâmetros e estado
 interface PatternParams {
@@ -407,357 +408,185 @@ const PatternGenerator = () => {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      height: '100vh', 
-      fontFamily: 'Arial, sans-serif',
-      backgroundColor: '#2a2a2a',
-      color: '#ffffff'
-    }}>
+    <div className="app-container">
       {/* Painel de Controle */}
-      <div style={{
-        width: '300px',
-        padding: '20px',
-        backgroundColor: '#1a1a1a',
-        overflowY: 'auto',
-        borderRight: '2px solid #444'
-      }}>
-        <h2 style={{ marginTop: 0, color: '#ffffff' }}>Gerador de Patterns</h2>
-        
-        {/* Controles de Pattern */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Pattern:</label>
-          <select 
-            value={currentPattern} 
-            onChange={(e) => setCurrentPattern(e.target.value)}
-            style={{ width: '100%', padding: '5px', backgroundColor: '#333', color: '#fff', border: '1px solid #555' }}
-          >
+      <div className="controls-panel">
+        <div className="control-group">
+          <h3>/EFFECTS</h3>
+          <ul className="pattern-list">
             {Object.keys(patterns).map(name => (
-              <option key={name} value={name}>{name}</option>
+              <li 
+                key={name} 
+                className={`pattern-list-item ${currentPattern === name ? 'active' : ''}`}
+                onClick={() => setCurrentPattern(name)}
+              >
+                [{currentPattern === name ? '*' : ' '}] {name.toUpperCase()}
+              </li>
             ))}
-          </select>
+          </ul>
         </div>
 
-        {/* Controles de Animação */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            Velocidade: {speed}
-          </label>
+        <div className="control-group">
+          <div className="slider-control">
+            <label>Speed</label>
+            <span>{speed}</span>
+          </div>
           <input
-            type="range"
-            min="1"
-            max="20"
-            value={speed}
+            type="range" min="1" max="20" value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
-            style={{ width: '100%' }}
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            Densidade: {density.toFixed(2)}
-          </label>
+        <div className="control-group">
+          <div className="slider-control">
+            <label>Density</label>
+            <span>{density.toFixed(2)}</span>
+          </div>
           <input
-            type="range"
-            min="0.1"
-            max="2"
-            step="0.1"
-            value={density}
+            type="range" min="0.1" max="2" step="0.1" value={density}
             onChange={(e) => setDensity(Number(e.target.value))}
-            style={{ width: '100%' }}
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            Escala: {scale.toFixed(2)}
-          </label>
+        <div className="control-group">
+          <div className="slider-control">
+            <label>Scale</label>
+            <span>{scale.toFixed(2)}</span>
+          </div>
           <input
-            type="range"
-            min="0.05"
-            max="1"
-            step="0.05"
-            value={scale}
+            type="range" min="0.05" max="1" step="0.05" value={scale}
             onChange={(e) => setScale(Number(e.target.value))}
-            style={{ width: '100%' }}
           />
         </div>
 
-        {/* Dimensões */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            Largura: {width}
-          </label>
+        <div className="control-group">
+          <div className="slider-control">
+            <label>Width</label>
+            <span>{width}</span>
+          </div>
           <input
-            type="range"
-            min="20"
-            max="120"
-            value={width}
+            type="range" min="20" max="120" value={width}
             onChange={(e) => setWidth(Number(e.target.value))}
-            style={{ width: '100%' }}
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            Altura: {height}
-          </label>
+        <div className="control-group">
+          <div className="slider-control">
+            <label>Height</label>
+            <span>{height}</span>
+          </div>
           <input
-            type="range"
-            min="10"
-            max="60"
-            value={height}
+            type="range" min="10" max="60" value={height}
             onChange={(e) => setHeight(Number(e.target.value))}
-            style={{ width: '100%' }}
           />
         </div>
 
-        {/* Caracteres */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Tipo de Caracteres:</label>
+        <div className="control-group">
+          <div className="slider-control">
+            <label>Font Size</label>
+            <span>{fontSize}</span>
+          </div>
+          <input
+            type="range" min="8" max="24" value={fontSize}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+          />
+        </div>
+
+        <div className="control-group character-set-group">
+          <label>Character Set:</label>
           <select 
             value={characterPreset} 
+            className="select-field"
             onChange={(e) => {
               setCharacterPreset(e.target.value);
               if (e.target.value !== 'custom') {
                 setCharacters(characterPresets[e.target.value]);
               }
             }}
-            style={{ 
-              width: '100%', 
-              padding: '5px', 
-              backgroundColor: '#333', 
-              color: '#fff', 
-              border: '1px solid #555',
-              marginBottom: '10px'
-            }}
           >
-            <option value="blocks">Blocos █▓▒░·</option>
-            <option value="dots">Pontos ●○◐◑◒◓</option>
-            <option value="circles">Círculos ●◉○◎◌·</option>
-            <option value="squares">Quadrados ■▪▫◼◻▢</option>
-            <option value="lines">Linhas ║│┃┆┇┊</option>
-            <option value="gradients">Gradientes ██▓▒░ </option>
-            <option value="minimal">Minimal █░ </option>
-            <option value="ascii">ASCII @#*+=:-.</option>
-            <option value="braille">Braille ⣿⣾⣽⣻⣟⣯</option>
-            <option value="geometric">Geométrico ▲△▼▽◆◇</option>
-            <option value="custom">Personalizado</option>
+            <option value="blocks">Blocks</option>
+            <option value="dots">Dots</option>
+            <option value="circles">Circles</option>
+            <option value="squares">Squares</option>
+            <option value="lines">Lines</option>
+            <option value="gradients">Gradients</option>
+            <option value="minimal">Minimal</option>
+            <option value="ascii">ASCII</option>
+            <option value="braille">Braille</option>
+            <option value="geometric">Geometric</option>
+            <option value="custom">Custom</option>
           </select>
-          
-          <label style={{ display: 'block', marginBottom: '5px' }}>Caracteres:</label>
           <input
             type="text"
             value={characters}
+            className="input-field"
             onChange={(e) => {
               setCharacters(e.target.value);
               setCharacterPreset('custom');
             }}
             disabled={characterPreset !== 'custom'}
-            style={{ 
-              width: '100%', 
-              padding: '5px', 
-              backgroundColor: characterPreset === 'custom' ? '#333' : '#222', 
-              color: characterPreset === 'custom' ? '#fff' : '#666', 
-              border: '1px solid #555',
-              cursor: characterPreset === 'custom' ? 'text' : 'not-allowed'
-            }}
-          />
-          <small style={{ color: '#aaa', display: 'block', marginTop: '5px' }}>
-            {characterPreset === 'custom' ? 
-              'Digite seus próprios caracteres' : 
-              'Selecione "Personalizado" para editar'
-            }
-          </small>
-        </div>
-
-        {/* Cores */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Cor de Fundo:</label>
-          <input
-            type="color"
-            value={backgroundColor}
-            onChange={(e) => setBackgroundColor(e.target.value)}
-            style={{ width: '100%', height: '30px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Cor do Texto:</label>
-          <input
-            type="color"
-            value={textColor}
-            onChange={(e) => setTextColor(e.target.value)}
-            style={{ width: '100%', height: '30px' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            Tamanho da Fonte: {fontSize}px
+        <div className="control-group">
+          <label className="checkbox-control">
+            <input type="checkbox" checked={textMode} onChange={(e) => setTextMode(e.target.checked)} />
+            Text Mode
           </label>
-          <input
-            type="range"
-            min="8"
-            max="24"
-            value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
-            style={{ width: '100%' }}
-          />
-        </div>
-
-        {/* Modo Texto */}
-        <div style={{ marginBottom: '20px', borderTop: '1px solid #444', paddingTop: '15px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-            <input
-              type="checkbox"
-              checked={textMode}
-              onChange={(e) => setTextMode(e.target.checked)}
-            />
-            <span style={{ fontWeight: 'bold', color: '#4CAF50' }}>🔤 Modo Texto</span>
-          </label>
-          
           {textMode && (
             <>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>Texto:</label>
-                <input
-                  type="text"
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value.toUpperCase())}
-                  placeholder="Digite seu texto..."
-                  style={{ 
-                    width: '100%', 
-                    padding: '8px', 
-                    backgroundColor: '#333', 
-                    color: '#fff', 
-                    border: '1px solid #555',
-                    borderRadius: '4px'
-                  }}
-                />
+              <input
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value.toUpperCase())}
+                placeholder="Your text..."
+                className="input-field"
+              />
+              <div className="slider-control">
+                <label>Text Size</label>
+                <span>{textScale}</span>
               </div>
-              
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Tamanho do Texto: {textScale}
-                </label>
-                <input
-                  type="range"
-                  min="4"
-                  max="15"
-                  value={textScale}
-                  onChange={(e) => setTextScale(Number(e.target.value))}
-                  style={{ width: '100%' }}
-                />
+              <input type="range" min="4" max="15" value={textScale} onChange={(e) => setTextScale(Number(e.target.value))} />
+              <div className="slider-control">
+                <label>Thickness</label>
+                <span>{textThickness}</span>
               </div>
-              
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Espessura: {textThickness}
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="8"
-                  value={textThickness}
-                  onChange={(e) => setTextThickness(Number(e.target.value))}
-                  style={{ width: '100%' }}
-                />
-              </div>
+              <input type="range" min="1" max="8" value={textThickness} onChange={(e) => setTextThickness(Number(e.target.value))} />
             </>
           )}
         </div>
 
-        {/* Opções */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <input
-              type="checkbox"
-              checked={isAnimating}
-              onChange={(e) => setIsAnimating(e.target.checked)}
-            />
-            Animar
+        <div className="control-group">
+          <label className="checkbox-control">
+            <input type="checkbox" checked={isAnimating} onChange={(e) => setIsAnimating(e.target.checked)} />
+            Animate
+          </label>
+          <label className="checkbox-control">
+            <input type="checkbox" checked={mouseInteraction} onChange={(e) => setMouseInteraction(e.target.checked)} />
+            Mouse Interaction
           </label>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <input
-              type="checkbox"
-              checked={mouseInteraction}
-              onChange={(e) => setMouseInteraction(e.target.checked)}
-            />
-            Interação com Mouse
-          </label>
+        <div className="control-group">
+          <label>Background Color:</label>
+          <input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="input-field" />
+          <label>Text Color:</label>
+          <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="input-field" />
         </div>
 
-        {/* Botões */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button
-            onClick={copyToClipboard}
-            style={{
-              padding: '10px',
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Copiar Pattern
-          </button>
-          
-          <button
-            onClick={exportPattern}
-            style={{
-              padding: '10px',
-              backgroundColor: '#2196F3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Exportar .txt
-          </button>
-          
-          <button
-            onClick={resetSettings}
-            style={{
-              padding: '10px',
-              backgroundColor: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Resetar Configurações
-          </button>
-        </div>
+        <button onClick={copyToClipboard} className="button">Copy</button>
+        <button onClick={exportPattern} className="button-secondary">Export</button>
+        <button onClick={resetSettings} className="button-secondary">Reset</button>
       </div>
 
       {/* Área de Visualização */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: backgroundColor,
-        overflow: 'hidden'
-      }}>
+      <div className="preview-panel" style={{ backgroundColor }}>
         <pre
           ref={containerRef}
+          className="ascii-art"
           style={{
-            fontFamily: 'monospace',
             fontSize: `${fontSize}px`,
-            lineHeight: '1',
-            letterSpacing: '0.05em',
             color: textColor,
-            userSelect: 'none',
-            cursor: mouseInteraction ? 'crosshair' : 'default',
-            margin: 0,
-            padding: '20px'
           }}
           onMouseMove={handleMouseMove}
           onMouseDown={() => setMouseDown(true)}
