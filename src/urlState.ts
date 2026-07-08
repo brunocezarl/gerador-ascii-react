@@ -1,6 +1,8 @@
 // Estado compartilhável via hash da URL. Chaves curtas para links menores.
 export interface ShareState {
   pattern: string;
+  patternB: string; // 'none' desliga o blend
+  patternMix: number;
   speed: number;
   density: number;
   scale: number;
@@ -24,6 +26,8 @@ type Compact = { [key: string]: string | number | boolean };
 
 const KEYS: { [K in keyof ShareState]: string } = {
   pattern: 'p',
+  patternB: 'p2',
+  patternMix: 'pm',
   speed: 'sp',
   density: 'd',
   scale: 'sc',

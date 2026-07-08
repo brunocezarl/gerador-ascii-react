@@ -6,6 +6,7 @@ import { buildTextMask, CELL_ASPECT } from './textmask';
 import {
   computeField,
   fieldToText,
+  fieldToSvg,
   paintField,
   makeColorLUT,
   palettes,
@@ -15,9 +16,13 @@ import type { FieldOptions, Palette } from './engine';
 import { encodeShareHash, decodeShareHash } from './urlState';
 import type { ShareState } from './urlState';
 import { downloadBlob, downloadText, encodeGif } from './exporters';
+import { loadPresets, persistPresets, MAX_PRESETS } from './presets';
+import type { SavedPreset } from './presets';
 
 const DEFAULTS: ShareState = {
   pattern: 'waves',
+  patternB: 'none',
+  patternMix: 0.5,
   speed: 5,
   density: 0.3,
   scale: 0.2,
@@ -64,6 +69,11 @@ const PatternGenerator = () => {
     const p = initStr('pattern');
     return patterns[p] ? p : DEFAULTS.pattern;
   });
+  const [patternB, setPatternB] = useState(() => {
+    const p = initStr('patternB');
+    return patterns[p] ? p : 'none';
+  });
+  const [patternMix, setPatternMix] = useState(() => initNum('patternMix', 0, 1));
   const [speed, setSpeed] = useState(() => initNum('speed', 1, 20));
   const [density, setDensity] = useState(() => initNum('density', 0.1, 2));
   const [scale, setScale] = useState(() => initNum('scale', 0.05, 1));
@@ -90,6 +100,8 @@ const PatternGenerator = () => {
   const [exportScale, setExportScale] = useState(2);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [presets, setPresets] = useState<SavedPreset[]>(() => loadPresets());
+  const [presetName, setPresetName] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // O frame e o mouse ficam em refs para não re-renderizar o React a cada quadro
@@ -125,6 +137,8 @@ const PatternGenerator = () => {
   const buildFieldOptions = useCallback(
     (mouse: { x: number; y: number } | null): FieldOptions => ({
       patternName: currentPattern,
+      patternNameB: patternB === 'none' ? null : patternB,
+      patternMix,
       scale,
       speed,
       width,
@@ -135,7 +149,7 @@ const PatternGenerator = () => {
       imageMix: imageLum ? imageMix : 0,
       mouse,
     }),
-    [currentPattern, scale, speed, width, height, density, textMask, imageLum, imageMix]
+    [currentPattern, patternB, patternMix, scale, speed, width, height, density, textMask, imageLum, imageMix]
   );
 
   // Pinta o estado atual em um contexto qualquer (preview ou export)
@@ -202,6 +216,8 @@ const PatternGenerator = () => {
   const shareState = useMemo<ShareState>(
     () => ({
       pattern: currentPattern,
+      patternB,
+      patternMix,
       speed,
       density,
       scale,
@@ -220,9 +236,9 @@ const PatternGenerator = () => {
       textScale,
       textThickness,
     }),
-    [currentPattern, speed, density, scale, width, height, characters, characterPreset,
-     fontSize, backgroundColor, textColor, colorMode, colorA, colorB,
-     textMode, textInput, textScale, textThickness]
+    [currentPattern, patternB, patternMix, speed, density, scale, width, height,
+     characters, characterPreset, fontSize, backgroundColor, textColor, colorMode,
+     colorA, colorB, textMode, textInput, textScale, textThickness]
   );
 
   useEffect(() => {
@@ -240,11 +256,42 @@ const PatternGenerator = () => {
     setColorB(palette.stops[1]);
   }, []);
 
+  // Aplica um ShareState completo (preset salvo ou reset)
+  const applyShareState = useCallback((state: ShareState) => {
+    setCurrentPattern(patterns[state.pattern] ? state.pattern : DEFAULTS.pattern);
+    setPatternB(patterns[state.patternB] ? state.patternB : 'none');
+    setPatternMix(state.patternMix);
+    setSpeed(state.speed);
+    setDensity(state.density);
+    setScale(state.scale);
+    setWidth(state.width);
+    setHeight(state.height);
+    setCharacters(state.characters);
+    setCharacterPreset(state.characterPreset);
+    setFontSize(state.fontSize);
+    setBackgroundColor(state.backgroundColor);
+    setTextColor(state.textColor);
+    setColorMode(state.colorMode === 'gradient' ? 'gradient' : 'mono');
+    setColorA(state.colorA);
+    setColorB(state.colorB);
+    setPaletteName('custom');
+    setTextMode(state.textMode);
+    setTextInput(state.textInput);
+    setTextScale(state.textScale);
+    setTextThickness(state.textThickness);
+  }, []);
+
   const randomize = useCallback(() => {
     const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)];
     const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
     setCurrentPattern(pick(patternNames));
+    if (Math.random() < 0.35) {
+      setPatternB(pick(patternNames));
+      setPatternMix(Math.round(rand(0.3, 0.7) * 100) / 100);
+    } else {
+      setPatternB('none');
+    }
     setScale(Math.round(rand(0.05, 0.6) * 100) / 100);
     setDensity(Math.round(rand(0.2, 1.2) * 10) / 10);
     setSpeed(Math.round(rand(2, 12)));
@@ -313,6 +360,24 @@ const PatternGenerator = () => {
     }, 'image/png');
   };
 
+  const exportSvg = () => {
+    const cellSize = fontSize * exportScale;
+    const field = computeField(frameRef.current, buildFieldOptions(null));
+    const svg = fieldToSvg(field, {
+      width,
+      height,
+      characters,
+      cellSize,
+      background: backgroundColor,
+      colors: colorLUT,
+    });
+    downloadBlob(
+      new Blob([svg], { type: 'image/svg+xml' }),
+      `ascii-${currentPattern}-${Date.now()}.svg`
+    );
+    showToast('SVG exportado! Editável no Figma/Illustrator.');
+  };
+
   const exportGif = async () => {
     if (busy) return;
     const { canvas, cellSize } = makeExportCanvas(GIF_MAX_WIDTH_PX);
@@ -335,6 +400,50 @@ const PatternGenerator = () => {
     } finally {
       setBusy(null);
     }
+  };
+
+  // Thumbnail pequeno do frame atual para a galeria de presets
+  const makeThumbnail = () => {
+    const cellSize = Math.max(2, 132 / (width * CELL_ASPECT));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * cellSize * CELL_ASPECT);
+    canvas.height = Math.round(height * cellSize);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    paintFrame(ctx, frameRef.current, cellSize, null);
+    return canvas.toDataURL('image/png');
+  };
+
+  const savePreset = () => {
+    const name = presetName.trim() || patterns[currentPattern].label;
+    const preset: SavedPreset = {
+      id: typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name,
+      thumb: makeThumbnail(),
+      state: shareState,
+      createdAt: Date.now(),
+    };
+    const next = [preset, ...presets].slice(0, MAX_PRESETS);
+    setPresets(next);
+    setPresetName('');
+    if (persistPresets(next)) {
+      showToast(`Preset "${name}" salvo!`);
+    } else {
+      showToast('Não foi possível salvar o preset (armazenamento indisponível).');
+    }
+  };
+
+  const applyPresetItem = (preset: SavedPreset) => {
+    applyShareState({ ...DEFAULTS, ...preset.state });
+    showToast(`Preset "${preset.name}" aplicado!`);
+  };
+
+  const deletePreset = (id: string) => {
+    const next = presets.filter((p) => p.id !== id);
+    setPresets(next);
+    persistPresets(next);
   };
 
   const shareLink = () => {
@@ -370,25 +479,7 @@ const PatternGenerator = () => {
   };
 
   const resetSettings = () => {
-    setCurrentPattern(DEFAULTS.pattern);
-    setSpeed(DEFAULTS.speed);
-    setDensity(DEFAULTS.density);
-    setScale(DEFAULTS.scale);
-    setWidth(DEFAULTS.width);
-    setHeight(DEFAULTS.height);
-    setCharacterPreset(DEFAULTS.characterPreset);
-    setCharacters(DEFAULTS.characters);
-    setBackgroundColor(DEFAULTS.backgroundColor);
-    setTextColor(DEFAULTS.textColor);
-    setColorMode(DEFAULTS.colorMode);
-    setColorA(DEFAULTS.colorA);
-    setColorB(DEFAULTS.colorB);
-    setPaletteName('custom');
-    setFontSize(DEFAULTS.fontSize);
-    setTextInput(DEFAULTS.textInput);
-    setTextMode(DEFAULTS.textMode);
-    setTextScale(DEFAULTS.textScale);
-    setTextThickness(DEFAULTS.textThickness);
+    applyShareState(DEFAULTS);
     removeImage();
     setImageMix(0.8);
   };
@@ -425,6 +516,32 @@ const PatternGenerator = () => {
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="control-group">
+          <label>Blend With:</label>
+          <select
+            value={patternB}
+            className="select-field"
+            onChange={(e) => setPatternB(e.target.value)}
+          >
+            <option value="none">None</option>
+            {patternNames.map((name) => (
+              <option key={name} value={name}>{patterns[name].label}</option>
+            ))}
+          </select>
+          {patternB !== 'none' && (
+            <>
+              <div className="slider-control">
+                <label>Blend Mix</label>
+                <span>{Math.round(patternMix * 100)}%</span>
+              </div>
+              <input
+                type="range" min="0" max="1" step="0.05" value={patternMix}
+                onChange={(e) => setPatternMix(Number(e.target.value))}
+              />
+            </>
+          )}
         </div>
 
         <div className="control-group">
@@ -658,9 +775,44 @@ const PatternGenerator = () => {
           <button onClick={exportGif} className="button" disabled={busy !== null}>
             {busy ?? `GIF (${GIF_SECONDS}s)`}
           </button>
+          <button onClick={exportSvg} className="button">SVG</button>
           <button onClick={copyToClipboard} className="button-secondary">Copy TXT</button>
           <button onClick={exportTxt} className="button-secondary">TXT</button>
           <button onClick={shareLink} className="button-secondary">Share Link</button>
+        </div>
+
+        <div className="control-group">
+          <h3>/PRESETS</h3>
+          <div className="preset-save-row">
+            <input
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder="Nome do preset..."
+              className="input-field"
+              onKeyDown={(e) => { if (e.key === 'Enter') savePreset(); }}
+            />
+            <button onClick={savePreset} className="button-secondary preset-save-button">Save</button>
+          </div>
+          {presets.length > 0 && (
+            <ul className="preset-list">
+              {presets.map((preset) => (
+                <li key={preset.id} className="preset-item">
+                  <button className="preset-load" onClick={() => applyPresetItem(preset)}>
+                    {preset.thumb && <img src={preset.thumb} alt="" className="preset-thumb" />}
+                    <span className="preset-name">{preset.name}</span>
+                  </button>
+                  <button
+                    className="preset-delete"
+                    title="Excluir preset"
+                    onClick={() => deletePreset(preset.id)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="control-group">

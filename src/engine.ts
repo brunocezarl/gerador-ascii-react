@@ -5,6 +5,9 @@ import { CELL_ASPECT } from './textmask';
 
 export interface FieldOptions {
   patternName: string;
+  // Pattern secundário misturado ao principal; null desliga o blend
+  patternNameB: string | null;
+  patternMix: number;
   scale: number;
   speed: number;
   width: number;
@@ -25,12 +28,20 @@ export const computeField = (frame: number, opts: FieldOptions): Float32Array =>
   const params: PatternParams = { scale: opts.scale, speed: opts.speed, width, height, density };
   const pattern = patterns[opts.patternName] ?? patterns.waves;
   const fn = pattern.fn;
+  const fnB = opts.patternNameB && patterns[opts.patternNameB] && opts.patternMix > 0
+    ? patterns[opts.patternNameB].fn
+    : null;
+  const patternMix = opts.patternMix;
   const field = new Float32Array(width * height);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = y * width + x;
       let value = fn(x, y, t, params);
+
+      if (fnB) {
+        value = value * (1 - patternMix) + fnB(x, y, t, params) * patternMix;
+      }
 
       // Mistura com a luminância da imagem (escuro na imagem = denso no ASCII)
       if (imageLum && imageMix > 0) {
@@ -121,6 +132,59 @@ export const paintField = (
       ctx.fillText(ch, x * cellW + cellW / 2, y * cellSize + cellSize / 2);
     }
   }
+};
+
+const escapeXml = (s: string): string =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// Gera um SVG editável (cada linha vira runs de <text> agrupados por cor).
+// O Courier tem advance fixo de 0.6em, então uma sequência de caracteres num
+// mesmo <text> cai exatamente na grade de células.
+export const fieldToSvg = (field: Float32Array, opts: PaintOptions): string => {
+  const { width, height, cellSize, background, colors } = opts;
+  const chars = opts.characters.length > 0 ? opts.characters : ' ';
+  const cellW = cellSize * CELL_ASPECT;
+  const svgW = Math.round(width * cellW);
+  const svgH = Math.round(height * cellSize);
+
+  const parts: string[] = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xml:space="preserve">`,
+    `<rect width="${svgW}" height="${svgH}" fill="${background}"/>`,
+    `<g font-family="'Courier New', Courier, monospace" font-size="${cellSize}px">`,
+  ];
+
+  for (let y = 0; y < height; y++) {
+    const baseline = (y * cellSize + cellSize * 0.8).toFixed(2);
+    let run: { x: number; color: string; text: string } | null = null;
+    const flush = () => {
+      if (run) {
+        parts.push(
+          `<text x="${(run.x * cellW).toFixed(2)}" y="${baseline}" fill="${run.color}">${escapeXml(run.text)}</text>`
+        );
+        run = null;
+      }
+    };
+
+    for (let x = 0; x < width; x++) {
+      const v = field[y * width + x];
+      const ch = chars[Math.min(chars.length - 1, Math.floor(v * chars.length))];
+      if (ch === ' ') {
+        flush();
+        continue;
+      }
+      const color = colors[Math.min(colors.length - 1, Math.floor(v * colors.length))];
+      if (run && run.color === color) {
+        run.text += ch;
+      } else {
+        flush();
+        run = { x, color, text: ch };
+      }
+    }
+    flush();
+  }
+
+  parts.push('</g></svg>');
+  return parts.join('\n');
 };
 
 // ---- Cores ----
