@@ -117,20 +117,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: auto;
 }
 
-.ascii-art {
-  font-family: 'Courier New', Courier, monospace;
-  white-space: pre;
-  line-height: 1;
-  letter-spacing: 0.05em;
+.ascii-canvas {
+  display: block;
   user-select: none;
   cursor: crosshair;
-  margin: 0;
-  padding: 20px;
-  color: #333;
-  background-color: #F0EEE6;
+  margin: 20px;
+  max-width: calc(100% - 40px);
 }
 
 .input-field,
@@ -164,4 +159,75 @@ body {
 
 .character-set-group .select-field {
   margin-bottom: 10px;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.color-row label {
+  flex: 1;
+  font-size: 13px;
+}
+
+.color-row input[type="color"] {
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #ccc;
+  background: none;
+  cursor: pointer;
+}
+
+.hint {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #F0EEE6;
+  padding: 10px 20px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  pointer-events: none;
+  animation: toast-in 0.15s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Em telas estreitas, o painel vira uma faixa superior rolável */
+@media (max-width: 720px) {
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .controls-panel {
+    width: auto;
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .preview-panel {
+    min-height: 55vh;
+  }
 }

@@ -1,69 +1,49 @@
-# React + TypeScript + Vite
+# ASCII Pattern Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Estúdio de patterns ASCII animados para designers e criativos. Gere composições
+generativas em tempo real, misture-as com imagens e texto, e exporte em formatos
+prontos para publicar.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **16 patterns matemáticos** — waves, plasma, mandala, séries inspiradas em
+  Almir Mavignier (arte óptica brasileira) e na proporção áurea/Fibonacci.
+- **Cor por gradiente** — mapeie a intensidade do pattern para um gradiente de
+  duas cores, com paletas curadas (Ink, Terminal, Neon, Ocean, Sunset, Forest,
+  Blueprint) ou cores customizadas.
+- **Image-to-ASCII** — faça upload de uma imagem e misture a luminância dela com
+  o pattern animado (slider de mix).
+- **Text Mode** — escreva palavras com uma fonte vetorial própria, preenchidas
+  pelo pattern animado.
+- **Export profissional**
+  - PNG em escala 1x–4x
+  - GIF animado de 4s
+  - TXT (e copiar para a área de transferência)
+- **Link compartilhável** — todo o estado vive na URL; o botão *Share Link*
+  copia um link que reproduz a composição exata.
+- **Interação** — influência do mouse ao arrastar, atalhos de teclado
+  (`espaço` = play/pause, `R` = randomize) e layout responsivo.
 
-## Expanding the ESLint configuration
+## Rodando
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # desenvolvimento
+npm run build    # build de produção
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Arquitetura
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `src/patterns.ts` | Biblioteca de patterns (função por célula + label) |
+| `src/charsets.ts` | Presets de caracteres, do denso ao leve |
+| `src/textmask.ts` | Fonte vetorial e máscara do Text Mode |
+| `src/engine.ts` | Motor: campo de valores, pintura em canvas, LUT de cores, paletas, amostragem de imagem |
+| `src/exporters.ts` | Download de arquivos, encoding de GIF (via `gifenc`) |
+| `src/urlState.ts` | Serialização do estado no hash da URL |
+| `src/App.tsx` | UI e orquestração |
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Para adicionar um pattern novo, basta registrar uma entrada em
+`src/patterns.ts` com `label` e `fn(x, y, t, params)` retornando um valor em
+torno de `[-1, 1]` — ele aparece automaticamente na lista e nos exports.
