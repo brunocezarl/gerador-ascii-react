@@ -26,9 +26,9 @@ export const computeField = (frame: number, opts: FieldOptions): Float32Array =>
   const t = frame * 0.05;
   const { width, height, density, textMask, imageLum, imageMix, mouse } = opts;
   const params: PatternParams = { scale: opts.scale, speed: opts.speed, width, height, density };
-  const pattern = patterns[opts.patternName] ?? patterns.waves;
-  const fn = pattern.fn;
-  const fnB = opts.patternNameB && patterns[opts.patternNameB] && opts.patternMix > 0
+  const hasPattern = (name: string) => Object.prototype.hasOwnProperty.call(patterns, name);
+  const fn = (hasPattern(opts.patternName) ? patterns[opts.patternName] : patterns.waves).fn;
+  const fnB = opts.patternNameB && hasPattern(opts.patternNameB) && opts.patternMix > 0
     ? patterns[opts.patternNameB].fn
     : null;
   const patternMix = opts.patternMix;
@@ -137,6 +137,9 @@ export const paintField = (
 const escapeXml = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// Para valores interpolados dentro de atributos (cores podem vir de fora)
+const escapeAttr = (s: string): string => escapeXml(s).replace(/"/g, '&quot;');
+
 // Gera um SVG editável (cada linha vira runs de <text> agrupados por cor).
 // O Courier tem advance fixo de 0.6em, então uma sequência de caracteres num
 // mesmo <text> cai exatamente na grade de células.
@@ -149,7 +152,7 @@ export const fieldToSvg = (field: Float32Array, opts: PaintOptions): string => {
 
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xml:space="preserve">`,
-    `<rect width="${svgW}" height="${svgH}" fill="${background}"/>`,
+    `<rect width="${svgW}" height="${svgH}" fill="${escapeAttr(background)}"/>`,
     `<g font-family="'Courier New', Courier, monospace" font-size="${cellSize}px">`,
   ];
 
@@ -159,7 +162,7 @@ export const fieldToSvg = (field: Float32Array, opts: PaintOptions): string => {
     const flush = () => {
       if (run) {
         parts.push(
-          `<text x="${(run.x * cellW).toFixed(2)}" y="${baseline}" fill="${run.color}">${escapeXml(run.text)}</text>`
+          `<text x="${(run.x * cellW).toFixed(2)}" y="${baseline}" fill="${escapeAttr(run.color)}">${escapeXml(run.text)}</text>`
         );
         run = null;
       }

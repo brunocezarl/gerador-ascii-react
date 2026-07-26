@@ -13,48 +13,16 @@ import {
   sampleImageLuminance,
 } from './engine';
 import type { FieldOptions, Palette } from './engine';
-import { encodeShareHash, decodeShareHash } from './urlState';
+import { encodeShareHash, decodeShareHash, sanitizeShareState, DEFAULT_STATE } from './urlState';
 import type { ShareState } from './urlState';
 import { downloadBlob, downloadText, encodeGif } from './exporters';
 import { loadPresets, persistPresets, MAX_PRESETS } from './presets';
 import type { SavedPreset } from './presets';
 
-const DEFAULTS: ShareState = {
-  pattern: 'waves',
-  patternB: 'none',
-  patternMix: 0.5,
-  speed: 5,
-  density: 0.3,
-  scale: 0.2,
-  width: 60,
-  height: 30,
-  characters: '█▓▒░·',
-  characterPreset: 'blocks',
-  fontSize: 12,
-  backgroundColor: '#F0EEE6',
-  textColor: '#333333',
-  colorMode: 'mono',
-  colorA: '#1A1A1A',
-  colorB: '#C9C3B4',
-  textMode: false,
-  textInput: 'HELLO',
-  textScale: 8,
-  textThickness: 3,
-};
-
-// Estado inicial vindo de um link compartilhado, se houver
-const fromUrl = typeof window !== 'undefined' ? decodeShareHash(window.location.hash) : null;
-
-const initStr = <K extends keyof ShareState>(key: K): ShareState[K] => {
-  const value = fromUrl?.[key];
-  return (typeof value === typeof DEFAULTS[key] ? value : DEFAULTS[key]) as ShareState[K];
-};
-
-const initNum = (key: keyof ShareState, min: number, max: number): number => {
-  const value = Number(fromUrl?.[key]);
-  if (!Number.isFinite(value)) return DEFAULTS[key] as number;
-  return Math.min(max, Math.max(min, value));
-};
+// Estado inicial vindo de um link compartilhado, se houver — sempre sanitizado
+const initialState = sanitizeShareState(
+  (typeof window !== 'undefined' ? decodeShareHash(window.location.hash) : null) ?? {}
+);
 
 const GIF_FPS = 12;
 const GIF_SECONDS = 4;
@@ -65,36 +33,28 @@ const GIF_MAX_WIDTH_PX = 640;
 
 const PatternGenerator = () => {
   const [isAnimating, setIsAnimating] = useState(true);
-  const [currentPattern, setCurrentPattern] = useState(() => {
-    const p = initStr('pattern');
-    return patterns[p] ? p : DEFAULTS.pattern;
-  });
-  const [patternB, setPatternB] = useState(() => {
-    const p = initStr('patternB');
-    return patterns[p] ? p : 'none';
-  });
-  const [patternMix, setPatternMix] = useState(() => initNum('patternMix', 0, 1));
-  const [speed, setSpeed] = useState(() => initNum('speed', 1, 20));
-  const [density, setDensity] = useState(() => initNum('density', 0.1, 2));
-  const [scale, setScale] = useState(() => initNum('scale', 0.05, 1));
-  const [width, setWidth] = useState(() => Math.round(initNum('width', 20, 160)));
-  const [height, setHeight] = useState(() => Math.round(initNum('height', 10, 80)));
-  const [characters, setCharacters] = useState(() => initStr('characters'));
-  const [characterPreset, setCharacterPreset] = useState(() => initStr('characterPreset'));
-  const [fontSize, setFontSize] = useState(() => Math.round(initNum('fontSize', 8, 24)));
-  const [backgroundColor, setBackgroundColor] = useState(() => initStr('backgroundColor'));
-  const [textColor, setTextColor] = useState(() => initStr('textColor'));
-  const [colorMode, setColorMode] = useState<'mono' | 'gradient'>(() =>
-    initStr('colorMode') === 'gradient' ? 'gradient' : 'mono'
-  );
-  const [colorA, setColorA] = useState(() => initStr('colorA'));
-  const [colorB, setColorB] = useState(() => initStr('colorB'));
+  const [currentPattern, setCurrentPattern] = useState(initialState.pattern);
+  const [patternB, setPatternB] = useState(initialState.patternB);
+  const [patternMix, setPatternMix] = useState(initialState.patternMix);
+  const [speed, setSpeed] = useState(initialState.speed);
+  const [density, setDensity] = useState(initialState.density);
+  const [scale, setScale] = useState(initialState.scale);
+  const [width, setWidth] = useState(initialState.width);
+  const [height, setHeight] = useState(initialState.height);
+  const [characters, setCharacters] = useState(initialState.characters);
+  const [characterPreset, setCharacterPreset] = useState(initialState.characterPreset);
+  const [fontSize, setFontSize] = useState(initialState.fontSize);
+  const [backgroundColor, setBackgroundColor] = useState(initialState.backgroundColor);
+  const [textColor, setTextColor] = useState(initialState.textColor);
+  const [colorMode, setColorMode] = useState<'mono' | 'gradient'>(initialState.colorMode);
+  const [colorA, setColorA] = useState(initialState.colorA);
+  const [colorB, setColorB] = useState(initialState.colorB);
   const [paletteName, setPaletteName] = useState('custom');
   const [mouseInteraction, setMouseInteraction] = useState(true);
-  const [textMode, setTextMode] = useState(() => initStr('textMode'));
-  const [textInput, setTextInput] = useState(() => initStr('textInput'));
-  const [textScale, setTextScale] = useState(() => initNum('textScale', 4, 15));
-  const [textThickness, setTextThickness] = useState(() => initNum('textThickness', 1, 8));
+  const [textMode, setTextMode] = useState(initialState.textMode);
+  const [textInput, setTextInput] = useState(initialState.textInput);
+  const [textScale, setTextScale] = useState(initialState.textScale);
+  const [textThickness, setTextThickness] = useState(initialState.textThickness);
   const [sourceImage, setSourceImage] = useState<{ img: HTMLImageElement; name: string } | null>(null);
   const [imageMix, setImageMix] = useState(0.8);
   const [exportScale, setExportScale] = useState(2);
@@ -116,6 +76,8 @@ const PatternGenerator = () => {
     window.clearTimeout(toastTimerRef.current);
     toastTimerRef.current = window.setTimeout(() => setToast(null), 2500);
   }, []);
+
+  useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
 
   // A máscara do texto só é recalculada quando os parâmetros do texto mudam
   const textMask = useMemo(
@@ -256,10 +218,11 @@ const PatternGenerator = () => {
     setColorB(palette.stops[1]);
   }, []);
 
-  // Aplica um ShareState completo (preset salvo ou reset)
-  const applyShareState = useCallback((state: ShareState) => {
-    setCurrentPattern(patterns[state.pattern] ? state.pattern : DEFAULTS.pattern);
-    setPatternB(patterns[state.patternB] ? state.patternB : 'none');
+  // Aplica um estado vindo de fora (preset salvo ou reset), sempre sanitizado
+  const applyShareState = useCallback((raw: Partial<ShareState>) => {
+    const state = sanitizeShareState(raw);
+    setCurrentPattern(state.pattern);
+    setPatternB(state.patternB);
     setPatternMix(state.patternMix);
     setSpeed(state.speed);
     setDensity(state.density);
@@ -271,7 +234,7 @@ const PatternGenerator = () => {
     setFontSize(state.fontSize);
     setBackgroundColor(state.backgroundColor);
     setTextColor(state.textColor);
-    setColorMode(state.colorMode === 'gradient' ? 'gradient' : 'mono');
+    setColorMode(state.colorMode);
     setColorA(state.colorA);
     setColorB(state.colorB);
     setPaletteName('custom');
@@ -306,6 +269,7 @@ const PatternGenerator = () => {
   // Atalhos: espaço = play/pause, R = randomize
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
       if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
       if (e.code === 'Space') {
@@ -436,7 +400,7 @@ const PatternGenerator = () => {
   };
 
   const applyPresetItem = (preset: SavedPreset) => {
-    applyShareState({ ...DEFAULTS, ...preset.state });
+    applyShareState(preset.state);
     showToast(`Preset "${preset.name}" aplicado!`);
   };
 
@@ -479,7 +443,7 @@ const PatternGenerator = () => {
   };
 
   const resetSettings = () => {
-    applyShareState(DEFAULTS);
+    applyShareState(DEFAULT_STATE);
     removeImage();
     setImageMix(0.8);
   };
@@ -507,12 +471,13 @@ const PatternGenerator = () => {
           <h3>/EFFECTS</h3>
           <ul className="pattern-list">
             {patternNames.map((name) => (
-              <li
-                key={name}
-                className={`pattern-list-item ${currentPattern === name ? 'active' : ''}`}
-                onClick={() => setCurrentPattern(name)}
-              >
-                [{currentPattern === name ? '*' : ' '}] {patterns[name].label.toUpperCase()}
+              <li key={name}>
+                <button
+                  className={`pattern-list-item ${currentPattern === name ? 'active' : ''}`}
+                  onClick={() => setCurrentPattern(name)}
+                >
+                  [{currentPattern === name ? '*' : ' '}] {patterns[name].label.toUpperCase()}
+                </button>
               </li>
             ))}
           </ul>

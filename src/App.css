@@ -36,9 +36,22 @@ body {
   margin: 0;
 }
 
-.pattern-list-item {
+.pattern-list li {
   margin-bottom: 8px;
+}
+
+.pattern-list-item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
+  white-space: pre;
 }
 
 .pattern-list-item.active {
