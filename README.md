@@ -18,7 +18,7 @@ Gerador de patterns ASCII animados que roda no navegador. Escolha um efeito, um 
 
 ## Como rodar
 
-Requisitos: Node.js 20.19+, 22.13+ ou 24+ (exigido pelo ESLint 10).
+Requisitos: Node.js 22.13 ou mais recente (exigido pelo ESLint 10 e pelo Vitest 5).
 
 ```bash
 npm install
@@ -92,7 +92,7 @@ Os módulos de lógica não dependem do React, e os que têm comportamento test�
 
 ## Stack
 
-React 18, TypeScript, Vite 4, Vitest 3 e ESLint.
+React 18, TypeScript, Vite 8 (com o plugin do React 6), Vitest 5 e ESLint 10.
 
 ## Limitações
 
