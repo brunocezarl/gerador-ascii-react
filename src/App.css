@@ -165,3 +165,8 @@ body {
 .character-set-group .select-field {
   margin-bottom: 10px;
 }
+
+.notice {
+  font-size: 12px;
+  margin: 0 0 10px;
+}

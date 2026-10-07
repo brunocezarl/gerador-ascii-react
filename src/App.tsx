@@ -1,491 +1,38 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import './App.css';
-
-// Definindo os tipos para os parâmetros e estado
-interface PatternParams {
-  scale: number;
-  speed: number;
-  width: number;
-  height: number;
-  density: number;
-}
-
-type PatternFunction = (x: number, y: number, t: number, params: PatternParams) => number;
-
-// Presets de caracteres
-const characterPresets: { [key: string]: string } = {
-  blocks: '█▓▒░·',
-  dots: '●○◐◑◒◓',
-  circles: '●◉○◎◌·',
-  squares: '■▪▫◼◻▢',
-  lines: '║│┃┆┇┊',
-  gradients: '██▓▒░ ',
-  minimal: '█░ ',
-  ascii: '@#*+=:-.',
-  braille: '⣿⣾⣽⣻⣟⣯⣷⣶',
-  geometric: '▲△▼▽◆◇',
-};
-
-// Biblioteca de patterns
-const patterns: { [key: string]: PatternFunction } = {
-  waves: (x, y, t, params) => {
-    return Math.sin(x * params.scale + t * params.speed * 0.1) *
-           Math.cos(y * params.scale * 0.8 + t * params.speed * 0.05);
-  },
-
-  ripples: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-    return Math.sin(dist * params.scale - t * params.speed * 0.1);
-  },
-
-  spiral: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const angle = Math.atan2(y - cy, x - cx);
-    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-    return Math.sin(angle * 3 + dist * params.scale + t * params.speed * 0.1);
-  },
-
-  maze: (x, y, t, params) => {
-    const noise1 = Math.sin(x * params.scale + t * params.speed * 0.05);
-    const noise2 = Math.cos(y * params.scale + t * params.speed * 0.03);
-    return noise1 * noise2;
-  },
-
-  diamond: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const diamond = Math.abs(x - cx) + Math.abs(y - cy);
-    return Math.sin(diamond * params.scale + t * params.speed * 0.1);
-  },
-
-  plasma: (x, y, t, params) => {
-    const v1 = Math.sin(x * params.scale + t * params.speed * 0.1);
-    const v2 = Math.sin(y * params.scale + t * params.speed * 0.08);
-    const v3 = Math.sin((x + y) * params.scale * 0.5 + t * params.speed * 0.06);
-    const v4 = Math.sin(Math.sqrt(x ** 2 + y ** 2) * params.scale + t * params.speed * 0.12);
-    return (v1 + v2 + v3 + v4) / 4;
-  },
-
-  tunnel: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const angle = Math.atan2(y - cy, x - cx);
-    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-    return Math.sin(angle * 8) * Math.cos(1 / (dist * params.scale + 0.1) + t * params.speed * 0.1);
-  },
-
-  mandala: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const angle = Math.atan2(y - cy, x - cx);
-    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-    return Math.sin(angle * 6 + t * params.speed * 0.05) *
-           Math.cos(dist * params.scale + t * params.speed * 0.08);
-  },
-
-  // Inspirado em Almir Mavignier - Arte Óptica Brasileira
-  mavignier_dots: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const dx = x - cx;
-    const dy = y - cy;
-
-    // Padrão de pontos em expansão com distorção óptica
-    const angle = Math.atan2(dy, dx);
-
-    // Criar efeito de pontos em grade distorcida
-    const gridX = Math.floor(x / 3) * 3;
-    const gridY = Math.floor(y / 3) * 3;
-    const gridDist = Math.sqrt((gridX - cx) ** 2 + (gridY - cy) ** 2);
-
-    // Ondulação que simula a distorção óptica de Mavignier
-    const wave = Math.sin(gridDist * params.scale + t * params.speed * 0.1);
-    const optical = Math.cos(angle * 8 + t * params.speed * 0.05);
-
-    return wave * optical;
-  },
-
-  mavignier_lines: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-
-    // Linhas radiais que se curvam - inspirado nas composições geométricas
-    const angle = Math.atan2(y - cy, x - cx);
-    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-
-    // Linhas radiais com curvatura progressiva
-    const radialLines = Math.sin(angle * 12 + dist * params.scale * 0.2 + t * params.speed * 0.08);
-
-    // Adicionar interferência circular
-    const circularWave = Math.cos(dist * params.scale + t * params.speed * 0.06);
-
-    return radialLines * 0.7 + circularWave * 0.3;
-  },
-
-  mavignier_kinetic: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const dx = x - cx;
-    const dy = y - cy;
-
-    // Efeito cinético com múltiplas frequências
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx);
-
-    // Três camadas de movimento com diferentes velocidades
-    const layer1 = Math.sin(dist * params.scale * 0.3 + t * params.speed * 0.12);
-    const layer2 = Math.cos(angle * 6 + t * params.speed * 0.08);
-    const layer3 = Math.sin((dx + dy) * params.scale * 0.2 + t * params.speed * 0.15);
-
-    // Combinação que cria efeito de movimento óptico
-    return layer1 * 0.4 + layer2 * 0.35 + layer3 * 0.25;
-  },
-
-  mavignier_geometric: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-
-    // Formas geométricas sobrepostas com rotação
-    const rotatedX = (x - cx) * Math.cos(t * params.speed * 0.02) - (y - cy) * Math.sin(t * params.speed * 0.02);
-    const rotatedY = (x - cx) * Math.sin(t * params.speed * 0.02) + (y - cy) * Math.cos(t * params.speed * 0.02);
-
-    // Padrão de losangos e quadrados
-    const diamond = Math.abs(rotatedX) + Math.abs(rotatedY);
-    const square = Math.max(Math.abs(rotatedX), Math.abs(rotatedY));
-
-    const pattern1 = Math.sin(diamond * params.scale + t * params.speed * 0.1);
-    const pattern2 = Math.cos(square * params.scale * 0.8 + t * params.speed * 0.07);
-
-    return pattern1 * 0.6 + pattern2 * 0.4;
-  },
-
-  // Inspirado na Proporção Áurea e Fibonacci
-  golden_spiral: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const dx = x - cx;
-    const dy = y - cy;
-
-    // Proporção áurea
-    const phi = (1 + Math.sqrt(5)) / 2; // 1.618...
-
-    // Converter para coordenadas polares
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx);
-
-    // Espiral logarítmica baseada na proporção áurea
-    const spiralRadius = Math.exp(angle / phi) * params.scale * 2;
-    const spiralDiff = Math.abs(dist - spiralRadius);
-
-    // Ondulação ao longo da espiral
-    const spiralWave = Math.sin(spiralDiff * params.scale * 10 + t * params.speed * 0.1);
-
-    // Adicionar rotação temporal
-    const rotatedAngle = angle + t * params.speed * 0.05;
-    const spiralPattern = Math.cos(rotatedAngle * phi);
-
-    return spiralWave * 0.7 + spiralPattern * 0.3;
-  },
-
-  fibonacci_grid: (x, y, t, params) => {
-    // Sequência de Fibonacci para criar grade proporcional
-    const fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
-    const phi = (1 + Math.sqrt(5)) / 2;
-
-    // Criar grade baseada em proporções de Fibonacci
-    const fibX = fib[Math.floor(x / 5) % fib.length];
-    const fibY = fib[Math.floor(y / 5) % fib.length];
-
-    // Ondulação baseada na razão áurea
-    const goldenX = Math.sin(x * params.scale / phi + t * params.speed * 0.08);
-    const goldenY = Math.cos(y * params.scale * phi + t * params.speed * 0.06);
-
-    // Interferência entre números de Fibonacci
-    const fibPattern = Math.sin(fibX * params.scale + t * params.speed * 0.1) *
-                      Math.cos(fibY * params.scale + t * params.speed * 0.07);
-
-    return goldenX * 0.4 + goldenY * 0.4 + fibPattern * 0.2;
-  },
-
-  golden_rectangles: (x, y, t, params) => {
-    const phi = (1 + Math.sqrt(5)) / 2;
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-
-    // Criar retângulos áureos concêntricos
-    const layers = 5;
-    let pattern = 0;
-
-    for (let i = 0; i < layers; i++) {
-      const scale = Math.pow(phi, i) * params.scale * 3;
-      const rectWidth = scale;
-      const rectHeight = scale / phi;
-
-      // Rotação baseada no tempo e na camada
-      const rotation = t * params.speed * 0.03 + i * Math.PI / 8;
-      const cos = Math.cos(rotation);
-      const sin = Math.sin(rotation);
-
-      // Aplicar rotação
-      const rotX = (x - cx) * cos - (y - cy) * sin;
-      const rotY = (x - cx) * sin + (y - cy) * cos;
-
-      // Verificar se está dentro do retângulo áureo
-      const inRect = Math.abs(rotX) < rectWidth && Math.abs(rotY) < rectHeight;
-      const edgeDist = Math.min(
-        rectWidth - Math.abs(rotX),
-        rectHeight - Math.abs(rotY)
-      );
-
-      if (inRect) {
-        pattern += Math.sin(edgeDist * params.scale * 2 + t * params.speed * 0.1) * (1 / (i + 1));
-      }
-    }
-
-    return pattern;
-  },
-
-  golden_petals: (x, y, t, params) => {
-    const cx = params.width / 2;
-    const cy = params.height / 2;
-    const dx = x - cx;
-    const dy = y - cy;
-
-    const phi = (1 + Math.sqrt(5)) / 2;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    // Número de pétalas baseado em Fibonacci (tipicamente 5, 8, 13, 21...)
-    const petals = 13;
-
-    // Ângulo áureo (137.5°) - ângulo entre pétalas na natureza
-    const goldenAngle = 2 * Math.PI * (1 - 1/phi);
-
-    // Padrão de pétalas
-    let petalPattern = 0;
-    for (let i = 0; i < petals; i++) {
-      const petalAngle = i * goldenAngle + t * params.speed * 0.02;
-      const petalX = Math.cos(petalAngle);
-      const petalY = Math.sin(petalAngle);
-
-      // Distância do ponto atual à linha da pétala
-      const dotProduct = dx * petalX + dy * petalY;
-      const petalDist = Math.abs(dx * petalY - dy * petalX);
-
-      if (dotProduct > 0) {
-        const petalIntensity = Math.exp(-petalDist * params.scale * 0.5) *
-                              Math.sin(dotProduct * params.scale * 0.3 + t * params.speed * 0.1);
-        petalPattern += petalIntensity;
-      }
-    }
-
-    // Adicionar centro radial
-    const centerPattern = Math.sin(dist * params.scale * 0.5 + t * params.speed * 0.08);
-
-    return petalPattern * 0.8 + centerPattern * 0.2;
-  }
-};
-
-// Fonte vetorial para o Text Mode: cada glifo é uma lista de segmentos
-// [x1, y1, x2, y2] em coordenadas normalizadas (0..1, eixo y para baixo)
-const strokeFont: { [key: string]: number[][] } = {
-  A: [[0, 1, 0.5, 0], [0.5, 0, 1, 1], [0.2, 0.6, 0.8, 0.6]],
-  B: [[0, 0, 0, 1], [0, 0, 0.8, 0], [0.8, 0, 0.8, 0.5], [0, 0.5, 0.8, 0.5], [0.8, 0.5, 0.8, 1], [0, 1, 0.8, 1]],
-  C: [[1, 0, 0, 0], [0, 0, 0, 1], [0, 1, 1, 1]],
-  D: [[0, 0, 0, 1], [0, 0, 0.7, 0.15], [0.7, 0.15, 0.7, 0.85], [0.7, 0.85, 0, 1]],
-  E: [[0, 0, 0, 1], [0, 0, 1, 0], [0, 0.5, 0.7, 0.5], [0, 1, 1, 1]],
-  F: [[0, 0, 0, 1], [0, 0, 1, 0], [0, 0.5, 0.7, 0.5]],
-  G: [[1, 0, 0, 0], [0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 1, 0.5], [1, 0.5, 0.5, 0.5]],
-  H: [[0, 0, 0, 1], [1, 0, 1, 1], [0, 0.5, 1, 0.5]],
-  I: [[0.5, 0, 0.5, 1], [0.2, 0, 0.8, 0], [0.2, 1, 0.8, 1]],
-  J: [[1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 0, 0.7]],
-  K: [[0, 0, 0, 1], [1, 0, 0, 0.5], [0, 0.5, 1, 1]],
-  L: [[0, 0, 0, 1], [0, 1, 1, 1]],
-  M: [[0, 1, 0, 0], [0, 0, 0.5, 0.5], [0.5, 0.5, 1, 0], [1, 0, 1, 1]],
-  N: [[0, 1, 0, 0], [0, 0, 1, 1], [1, 1, 1, 0]],
-  O: [[0, 0, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 0, 0]],
-  P: [[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 1, 0.5], [1, 0.5, 0, 0.5]],
-  Q: [[0, 0, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 0, 0], [0.6, 0.6, 1, 1]],
-  R: [[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 1, 0.5], [1, 0.5, 0, 0.5], [0.3, 0.5, 1, 1]],
-  S: [[1, 0, 0, 0], [0, 0, 0, 0.5], [0, 0.5, 1, 0.5], [1, 0.5, 1, 1], [1, 1, 0, 1]],
-  T: [[0, 0, 1, 0], [0.5, 0, 0.5, 1]],
-  U: [[0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 1, 0]],
-  V: [[0, 0, 0.5, 1], [0.5, 1, 1, 0]],
-  W: [[0, 0, 0.25, 1], [0.25, 1, 0.5, 0.4], [0.5, 0.4, 0.75, 1], [0.75, 1, 1, 0]],
-  X: [[0, 0, 1, 1], [1, 0, 0, 1]],
-  Y: [[0, 0, 0.5, 0.5], [1, 0, 0.5, 0.5], [0.5, 0.5, 0.5, 1]],
-  Z: [[0, 0, 1, 0], [1, 0, 0, 1], [0, 1, 1, 1]],
-  '0': [[0, 0, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 0, 0], [1, 0, 0, 1]],
-  '1': [[0.5, 0, 0.5, 1], [0.2, 0.2, 0.5, 0], [0.3, 1, 0.7, 1]],
-  '2': [[0, 0, 1, 0], [1, 0, 1, 0.5], [1, 0.5, 0, 1], [0, 1, 1, 1]],
-  '3': [[0, 0, 1, 0], [1, 0, 1, 1], [0, 1, 1, 1], [0.3, 0.5, 1, 0.5]],
-  '4': [[0, 0, 0, 0.5], [0, 0.5, 1, 0.5], [1, 0, 1, 1]],
-  '5': [[1, 0, 0, 0], [0, 0, 0, 0.5], [0, 0.5, 1, 0.5], [1, 0.5, 1, 1], [1, 1, 0, 1]],
-  '6': [[1, 0, 0, 0], [0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 1, 0.5], [1, 0.5, 0, 0.5]],
-  '7': [[0, 0, 1, 0], [1, 0, 0.4, 1]],
-  '8': [[0, 0, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 0, 0], [0, 0.5, 1, 0.5]],
-  '9': [[0, 0, 1, 0], [0, 0, 0, 0.5], [0, 0.5, 1, 0.5], [1, 0, 1, 1], [1, 1, 0, 1]],
-  ' ': [],
-  '.': [[0.5, 0.85, 0.5, 1]],
-  '-': [[0.2, 0.5, 0.8, 0.5]],
-  '!': [[0.5, 0, 0.5, 0.6], [0.5, 0.85, 0.5, 1]],
-  '?': [[0, 0.15, 0, 0], [0, 0, 1, 0], [1, 0, 1, 0.4], [1, 0.4, 0.5, 0.55], [0.5, 0.55, 0.5, 0.7], [0.5, 0.9, 0.5, 1]],
-};
-
-// Largura visual de uma célula em relação à sua altura (fonte monoespaçada)
-const CELL_ASPECT = 0.6;
-
-// Distância de um ponto a um segmento de reta
-const segmentDistance = (px: number, py: number, x1: number, y1: number, x2: number, y2: number) => {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const lenSq = dx * dx + dy * dy;
-  let t = lenSq === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  const ex = px - (x1 + t * dx);
-  const ey = py - (y1 + t * dy);
-  return Math.sqrt(ex * ex + ey * ey);
-};
-
-// Gera a máscara do texto: 1 onde a célula faz parte de um traço, 0 fora.
-// As distâncias são calculadas em "espaço visual" (x comprimido pelo aspecto
-// da célula) para que os traços tenham espessura uniforme na tela.
-const buildTextMask = (
-  text: string,
-  textScale: number,
-  textThickness: number,
-  width: number,
-  height: number
-): Uint8Array => {
-  const mask = new Uint8Array(width * height);
-  const chars = text.split('');
-  let glyphH = textScale;
-  let glyphW = (textScale * 0.6) / CELL_ASPECT;
-  let gap = glyphW * 0.5;
-  let totalW = chars.length * glyphW + Math.max(0, chars.length - 1) * gap;
-
-  // Encolher o texto proporcionalmente se não couber na grade
-  const maxW = width * 0.95;
-  if (totalW > maxW) {
-    const shrink = maxW / totalW;
-    glyphH *= shrink;
-    glyphW *= shrink;
-    gap *= shrink;
-    totalW = maxW;
-  }
-
-  const startX = (width - totalW) / 2;
-  const startY = (height - glyphH) / 2;
-  // O raio é limitado pelo tamanho do glifo para o traço não virar um borrão
-  const radius = Math.min(textThickness * 0.3, glyphH * 0.25);
-
-  // Converter os glifos em segmentos absolutos no espaço visual
-  const segments: number[][] = [];
-  chars.forEach((ch, i) => {
-    const glyph = strokeFont[ch];
-    if (!glyph) return;
-    const ox = startX + i * (glyphW + gap);
-    for (const [x1, y1, x2, y2] of glyph) {
-      segments.push([
-        (ox + x1 * glyphW) * CELL_ASPECT, startY + y1 * glyphH,
-        (ox + x2 * glyphW) * CELL_ASPECT, startY + y2 * glyphH,
-      ]);
-    }
-  });
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      for (const [x1, y1, x2, y2] of segments) {
-        if (segmentDistance(x * CELL_ASPECT, y, x1, y1, x2, y2) <= radius) {
-          mask[y * width + x] = 1;
-          break;
-        }
-      }
-    }
-  }
-
-  return mask;
-};
-
-interface RenderOptions {
-  patternName: string;
-  scale: number;
-  speed: number;
-  width: number;
-  height: number;
-  density: number;
-  characters: string;
-  textMask: Uint8Array | null;
-  mouse: { x: number; y: number } | null;
-}
-
-const renderAscii = (frame: number, opts: RenderOptions): string => {
-  const t = frame * 0.05;
-  const { width, height, density, characters, textMask, mouse } = opts;
-  const params: PatternParams = { scale: opts.scale, speed: opts.speed, width, height, density };
-  const pattern = patterns[opts.patternName];
-  let result = '';
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let value = pattern(x, y, t, params);
-
-      // Interação com mouse
-      if (mouse) {
-        const dx = x - mouse.x;
-        const dy = y - mouse.y;
-        const mouseDist = Math.sqrt(dx * dx + dy * dy);
-        const influence = Math.exp(-mouseDist * 0.2) * Math.sin(t * 3);
-        value += influence * 0.5;
-      }
-
-      // Text Mode: o texto mostra o pattern animado, o fundo fica claro
-      if (textMask) {
-        if (textMask[y * width + x]) {
-          value = value * 0.6 - 0.4; // Puxa para os caracteres mais densos
-        } else {
-          value = 1;
-        }
-      }
-
-      // Mapear valor para caractere
-      const normalized = (value + 1) / 2; // Normaliza de [-1,1] para [0,1]
-      const adjusted = Math.pow(normalized, 1 / density); // Ajusta densidade
-      const charIndex = Math.floor(adjusted * characters.length);
-      const clampedIndex = Math.max(0, Math.min(characters.length - 1, charIndex));
-
-      result += characters[clampedIndex] || ' ';
-    }
-    result += '\n';
-  }
-
-  return result;
-};
+import Slider from './components/Slider';
+import { advanceTime, toPatternTime } from './animation';
+import { patterns, type PatternName } from './patterns';
+import { characterPresets, DEFAULTS, type CharacterSetName } from './presets';
+import { renderAscii } from './renderAscii';
+import { buildTextMask, findUnsupportedChars } from './textMask';
 
 const PatternGenerator = () => {
   const [isAnimating, setIsAnimating] = useState(true);
-  const [currentPattern, setCurrentPattern] = useState('waves');
-  const [speed, setSpeed] = useState(5);
-  const [density, setDensity] = useState(0.3);
-  const [scale, setScale] = useState(0.2);
-  const [width, setWidth] = useState(60);
-  const [height, setHeight] = useState(30);
-  const [characters, setCharacters] = useState('█▓▒░·');
-  const [characterPreset, setCharacterPreset] = useState('blocks');
+  const [currentPattern, setCurrentPattern] = useState<PatternName>('waves');
+  const [speed, setSpeed] = useState(DEFAULTS.speed);
+  const [density, setDensity] = useState(DEFAULTS.density);
+  const [scale, setScale] = useState(DEFAULTS.scale);
+  const [width, setWidth] = useState(DEFAULTS.width);
+  const [height, setHeight] = useState(DEFAULTS.height);
+  const [characterPreset, setCharacterPreset] = useState<CharacterSetName>(DEFAULTS.characterPreset);
+  const [customCharacters, setCustomCharacters] = useState<string>(characterPresets[DEFAULTS.characterPreset]);
   const [mouseInteraction, setMouseInteraction] = useState(true);
-  const [backgroundColor, setBackgroundColor] = useState('#F0EEE6');
-  const [textColor, setTextColor] = useState('#333333');
-  const [fontSize, setFontSize] = useState(12);
-  const [textInput, setTextInput] = useState('HELLO');
-  const [textMode, setTextMode] = useState(false);
-  const [textScale, setTextScale] = useState(8);
-  const [textThickness, setTextThickness] = useState(3);
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULTS.backgroundColor);
+  const [textColor, setTextColor] = useState(DEFAULTS.textColor);
+  const [fontSize, setFontSize] = useState(DEFAULTS.fontSize);
+  const [textInput, setTextInput] = useState(DEFAULTS.textInput);
+  const [textMode, setTextMode] = useState(DEFAULTS.textMode);
+  const [textScale, setTextScale] = useState(DEFAULTS.textScale);
+  const [textThickness, setTextThickness] = useState(DEFAULTS.textThickness);
+  const [notice, setNotice] = useState<{ message: string } | null>(null);
 
+  // O set de caracteres é derivado: o preset escolhido ou o texto personalizado
+  const characters = characterPreset === 'custom' ? customCharacters : characterPresets[characterPreset];
+
+  // Tempo da animação (segundos) e mouse ficam em refs para não re-renderizar o React a cada quadro
+  const timeRef = useRef(0);
   const containerRef = useRef<HTMLPreElement>(null);
-  // O frame e o mouse ficam em refs para não re-renderizar o React a cada quadro
-  const frameRef = useRef(0);
   const mouseRef = useRef({ x: 0, y: 0, down: false });
   const renderFrameRef = useRef<(() => void) | null>(null);
 
@@ -494,6 +41,17 @@ const PatternGenerator = () => {
     () => (textMode ? buildTextMask(textInput, textScale, textThickness, width, height) : null),
     [textMode, textInput, textScale, textThickness, width, height]
   );
+  const unsupportedChars = useMemo(
+    () => (textMode ? findUnsupportedChars(textInput) : []),
+    [textMode, textInput]
+  );
+
+  // Mensagens de Copy somem sozinhas depois de um tempo
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(null), 2500);
+    return () => window.clearTimeout(id);
+  }, [notice]);
 
   useEffect(() => {
     const renderFrame = () => {
@@ -511,7 +69,7 @@ const PatternGenerator = () => {
       }
 
       // Escreve direto no DOM, sem passar pelo render do React
-      el.textContent = renderAscii(frameRef.current, {
+      el.textContent = renderAscii(toPatternTime(timeRef.current), {
         patternName: currentPattern,
         scale, speed, width, height, density, characters,
         textMask, mouse,
@@ -524,8 +82,10 @@ const PatternGenerator = () => {
     if (!isAnimating) return;
 
     let rafId: number;
-    const loop = () => {
-      frameRef.current += 1;
+    let last = performance.now();
+    const loop = (now: number) => {
+      timeRef.current = advanceTime(timeRef.current, now - last);
+      last = now;
       renderFrame();
       rafId = requestAnimationFrame(loop);
     };
@@ -534,13 +94,15 @@ const PatternGenerator = () => {
     return () => cancelAnimationFrame(rafId);
   }, [isAnimating, currentPattern, scale, speed, width, height, density, characters, mouseInteraction, textMask]);
 
+  // Quadro atual sem o efeito do mouse (usado por Copy e Export)
+  const snapshot = () => renderAscii(toPatternTime(timeRef.current), {
+    patternName: currentPattern,
+    scale, speed, width, height, density, characters,
+    textMask, mouse: null,
+  });
+
   const exportPattern = () => {
-    const pattern = renderAscii(frameRef.current, {
-      patternName: currentPattern,
-      scale, speed, width, height, density, characters,
-      textMask, mouse: null,
-    });
-    const blob = new Blob([pattern], { type: 'text/plain' });
+    const blob = new Blob([snapshot()], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -549,35 +111,34 @@ const PatternGenerator = () => {
     URL.revokeObjectURL(url);
   };
 
-  const copyToClipboard = () => {
-    const pattern = renderAscii(frameRef.current, {
-      patternName: currentPattern,
-      scale, speed, width, height, density, characters,
-      textMask, mouse: null,
-    });
-    navigator.clipboard.writeText(pattern).then(() => {
-      alert('Pattern copiado para a área de transferência!');
-    });
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(snapshot());
+      setNotice({ message: 'Pattern copiado para a área de transferência!' });
+    } catch {
+      // Sem contexto seguro (ex.: HTTP) o navegador bloqueia a área de transferência
+      setNotice({ message: 'Não foi possível copiar. Use Export para salvar o arquivo.' });
+    }
   };
 
   const resetSettings = () => {
-    setSpeed(5);
-    setDensity(0.3);
-    setScale(0.2);
-    setWidth(60);
-    setHeight(30);
-    setCharacterPreset('blocks');
-    setCharacters('█▓▒░·');
-    setBackgroundColor('#F0EEE6');
-    setTextColor('#333333');
-    setFontSize(12);
-    setTextInput('HELLO');
-    setTextMode(false);
-    setTextScale(8);
-    setTextThickness(3);
+    setSpeed(DEFAULTS.speed);
+    setDensity(DEFAULTS.density);
+    setScale(DEFAULTS.scale);
+    setWidth(DEFAULTS.width);
+    setHeight(DEFAULTS.height);
+    setCharacterPreset(DEFAULTS.characterPreset);
+    setCustomCharacters(characterPresets[DEFAULTS.characterPreset]);
+    setBackgroundColor(DEFAULTS.backgroundColor);
+    setTextColor(DEFAULTS.textColor);
+    setFontSize(DEFAULTS.fontSize);
+    setTextInput(DEFAULTS.textInput);
+    setTextMode(DEFAULTS.textMode);
+    setTextScale(DEFAULTS.textScale);
+    setTextThickness(DEFAULTS.textThickness);
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLPreElement>) => {
+  const handleMouseMove = (e: MouseEvent<HTMLPreElement>) => {
     mouseRef.current.x = e.clientX;
     mouseRef.current.y = e.clientY;
     if (!isAnimating && mouseRef.current.down) {
@@ -599,7 +160,7 @@ const PatternGenerator = () => {
         <div className="control-group">
           <h3>/EFFECTS</h3>
           <ul className="pattern-list">
-            {Object.keys(patterns).map(name => (
+            {(Object.keys(patterns) as PatternName[]).map(name => (
               <li
                 key={name}
                 className={`pattern-list-item ${currentPattern === name ? 'active' : ''}`}
@@ -612,69 +173,33 @@ const PatternGenerator = () => {
         </div>
 
         <div className="control-group">
-          <div className="slider-control">
-            <label>Speed</label>
-            <span>{speed}</span>
-          </div>
-          <input
-            type="range" min="1" max="20" value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
+          <Slider label="Speed" value={speed} min={1} max={20} onChange={setSpeed} />
+        </div>
+
+        <div className="control-group">
+          <Slider
+            label="Density" value={density} min={0.1} max={2} step={0.1}
+            display={density.toFixed(2)} onChange={setDensity}
           />
         </div>
 
         <div className="control-group">
-          <div className="slider-control">
-            <label>Density</label>
-            <span>{density.toFixed(2)}</span>
-          </div>
-          <input
-            type="range" min="0.1" max="2" step="0.1" value={density}
-            onChange={(e) => setDensity(Number(e.target.value))}
+          <Slider
+            label="Scale" value={scale} min={0.05} max={1} step={0.05}
+            display={scale.toFixed(2)} onChange={setScale}
           />
         </div>
 
         <div className="control-group">
-          <div className="slider-control">
-            <label>Scale</label>
-            <span>{scale.toFixed(2)}</span>
-          </div>
-          <input
-            type="range" min="0.05" max="1" step="0.05" value={scale}
-            onChange={(e) => setScale(Number(e.target.value))}
-          />
+          <Slider label="Width" value={width} min={20} max={120} onChange={setWidth} />
         </div>
 
         <div className="control-group">
-          <div className="slider-control">
-            <label>Width</label>
-            <span>{width}</span>
-          </div>
-          <input
-            type="range" min="20" max="120" value={width}
-            onChange={(e) => setWidth(Number(e.target.value))}
-          />
+          <Slider label="Height" value={height} min={10} max={60} onChange={setHeight} />
         </div>
 
         <div className="control-group">
-          <div className="slider-control">
-            <label>Height</label>
-            <span>{height}</span>
-          </div>
-          <input
-            type="range" min="10" max="60" value={height}
-            onChange={(e) => setHeight(Number(e.target.value))}
-          />
-        </div>
-
-        <div className="control-group">
-          <div className="slider-control">
-            <label>Font Size</label>
-            <span>{fontSize}</span>
-          </div>
-          <input
-            type="range" min="8" max="24" value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
-          />
+          <Slider label="Font Size" value={fontSize} min={8} max={24} onChange={setFontSize} />
         </div>
 
         <div className="control-group character-set-group">
@@ -683,10 +208,10 @@ const PatternGenerator = () => {
             value={characterPreset}
             className="select-field"
             onChange={(e) => {
-              setCharacterPreset(e.target.value);
-              if (e.target.value !== 'custom') {
-                setCharacters(characterPresets[e.target.value]);
-              }
+              const next = e.target.value as CharacterSetName;
+              // Ao personalizar, o ponto de partida é o set que está em uso
+              if (next === 'custom') setCustomCharacters(characters);
+              setCharacterPreset(next);
             }}
           >
             <option value="blocks">Blocks</option>
@@ -706,7 +231,7 @@ const PatternGenerator = () => {
             value={characters}
             className="input-field"
             onChange={(e) => {
-              setCharacters(e.target.value);
+              setCustomCharacters(e.target.value);
               setCharacterPreset('custom');
             }}
             disabled={characterPreset !== 'custom'}
@@ -727,16 +252,11 @@ const PatternGenerator = () => {
                 placeholder="Your text..."
                 className="input-field"
               />
-              <div className="slider-control">
-                <label>Text Size</label>
-                <span>{textScale}</span>
-              </div>
-              <input type="range" min="4" max="15" value={textScale} onChange={(e) => setTextScale(Number(e.target.value))} />
-              <div className="slider-control">
-                <label>Thickness</label>
-                <span>{textThickness}</span>
-              </div>
-              <input type="range" min="1" max="8" value={textThickness} onChange={(e) => setTextThickness(Number(e.target.value))} />
+              {unsupportedChars.length > 0 && (
+                <p className="notice">Sem desenho, ignorados: {unsupportedChars.join(' ')}</p>
+              )}
+              <Slider label="Text Size" value={textScale} min={4} max={15} onChange={setTextScale} />
+              <Slider label="Thickness" value={textThickness} min={1} max={8} onChange={setTextThickness} />
             </>
           )}
         </div>
@@ -762,6 +282,7 @@ const PatternGenerator = () => {
         <button onClick={copyToClipboard} className="button">Copy</button>
         <button onClick={exportPattern} className="button-secondary">Export</button>
         <button onClick={resetSettings} className="button-secondary">Reset</button>
+        {notice && <p className="notice" role="status">{notice.message}</p>}
       </div>
 
       {/* Área de Visualização */}
