@@ -23,6 +23,7 @@ const Slider = ({ label, value, min, max, step, display, onChange }: SliderProps
       <input
         id={id}
         type="range"
+        className="slider-input"
         min={min}
         max={max}
         step={step}
