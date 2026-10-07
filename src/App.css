@@ -179,13 +179,91 @@ body {
   margin-bottom: 15px;
 }
 
-.character-set-group {
+.stacked-group {
   display: flex;
   flex-direction: column;
 }
 
-.character-set-group .select-field {
+.stacked-group .select-field {
   margin-bottom: 10px;
+}
+
+.button-secondary:disabled,
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-secondary.compact {
+  padding: 8px;
+  font-size: 12px;
+}
+
+.button-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.step-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.step-row .button-secondary {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.save-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.saved-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+}
+
+.saved-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.saved-name {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.saved-name:hover {
+  text-decoration: underline;
+}
+
+.icon-button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .notice {

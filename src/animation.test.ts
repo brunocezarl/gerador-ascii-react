@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { advanceTime, toPatternTime } from './animation';
+import { advanceTime, FRAME_SECONDS, stepTime, toPatternTime } from './animation';
 
 // Simula N segundos de animação em um monitor com a taxa informada
 const simulate = (refreshHz: number, seconds: number) => {
@@ -25,6 +25,21 @@ describe('advanceTime', () => {
 
   it('nunca volta no tempo', () => {
     expect(advanceTime(2, -50)).toBe(2);
+  });
+});
+
+describe('stepTime', () => {
+  it('anda um frame de 60 fps para frente e para trás', () => {
+    expect(stepTime(1, 1)).toBeCloseTo(1 + FRAME_SECONDS, 10);
+    expect(stepTime(1, -1)).toBeCloseTo(1 - FRAME_SECONDS, 10);
+  });
+
+  it('não passa do início da animação', () => {
+    expect(stepTime(0, -5)).toBe(0);
+  });
+
+  it('um passo para frente e um para trás voltam ao mesmo ponto', () => {
+    expect(stepTime(stepTime(2.5, 1), -1)).toBeCloseTo(2.5, 10);
   });
 });
 
