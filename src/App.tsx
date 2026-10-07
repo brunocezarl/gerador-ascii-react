@@ -1,11 +1,15 @@
-import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type PointerEvent } from 'react';
 import './App.css';
 import Slider from './components/Slider';
 import { advanceTime, toPatternTime } from './animation';
+import { fitFontSize, MIN_FONT_SIZE } from './fit';
 import { patterns, type PatternName } from './patterns';
 import { characterPresets, DEFAULTS, type CharacterSetName } from './presets';
 import { renderAscii } from './renderAscii';
 import { buildTextMask, findUnsupportedChars } from './textMask';
+
+// Quantas vezes o encaixe pode descer 0,1px até a arte real caber
+const MAX_FIT_ATTEMPTS = 10;
 
 const PatternGenerator = () => {
   const [isAnimating, setIsAnimating] = useState(true);
@@ -21,6 +25,8 @@ const PatternGenerator = () => {
   const [backgroundColor, setBackgroundColor] = useState(DEFAULTS.backgroundColor);
   const [textColor, setTextColor] = useState(DEFAULTS.textColor);
   const [fontSize, setFontSize] = useState(DEFAULTS.fontSize);
+  // Fonte realmente usada na arte: igual ao Font Size, ou menor se a grade não couber no painel
+  const [fittedFont, setFittedFont] = useState(DEFAULTS.fontSize);
   const [textInput, setTextInput] = useState(DEFAULTS.textInput);
   const [textMode, setTextMode] = useState(DEFAULTS.textMode);
   const [textScale, setTextScale] = useState(DEFAULTS.textScale);
@@ -30,10 +36,11 @@ const PatternGenerator = () => {
   // O set de caracteres é derivado: o preset escolhido ou o texto personalizado
   const characters = characterPreset === 'custom' ? customCharacters : characterPresets[characterPreset];
 
-  // Tempo da animação (segundos) e mouse ficam em refs para não re-renderizar o React a cada quadro
+  // Tempo da animação (segundos) e ponteiro ficam em refs para não re-renderizar o React a cada quadro
   const timeRef = useRef(0);
   const containerRef = useRef<HTMLPreElement>(null);
-  const mouseRef = useRef({ x: 0, y: 0, down: false });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const pointerRef = useRef({ x: 0, y: 0, down: false });
   const renderFrameRef = useRef<(() => void) | null>(null);
 
   // A máscara do texto só é recalculada quando os parâmetros do texto mudam
@@ -59,12 +66,12 @@ const PatternGenerator = () => {
       if (!el) return;
 
       // O rect é consultado uma vez por frame, fora do loop de células
-      let mouse: { x: number; y: number } | null = null;
-      if (mouseInteraction && mouseRef.current.down) {
+      let pointer: { x: number; y: number } | null = null;
+      if (mouseInteraction && pointerRef.current.down) {
         const rect = el.getBoundingClientRect();
-        mouse = {
-          x: ((mouseRef.current.x - rect.left) / rect.width) * width,
-          y: ((mouseRef.current.y - rect.top) / rect.height) * height,
+        pointer = {
+          x: ((pointerRef.current.x - rect.left) / rect.width) * width,
+          y: ((pointerRef.current.y - rect.top) / rect.height) * height,
         };
       }
 
@@ -72,7 +79,7 @@ const PatternGenerator = () => {
       el.textContent = renderAscii(toPatternTime(timeRef.current), {
         patternName: currentPattern,
         scale, speed, width, height, density, characters,
-        textMask, mouse,
+        textMask, mouse: pointer,
       });
     };
 
@@ -94,7 +101,44 @@ const PatternGenerator = () => {
     return () => cancelAnimationFrame(rafId);
   }, [isAnimating, currentPattern, scale, speed, width, height, density, characters, mouseInteraction, textMask]);
 
-  // Quadro atual sem o efeito do mouse (usado por Copy e Export)
+  // Encaixe: se a arte não cabe no painel, a fonte diminui (nunca passa do Font Size).
+  // Vem depois do efeito da animação, que já escreveu a grade nova no DOM.
+  useEffect(() => {
+    const panel = panelRef.current;
+    const el = containerRef.current;
+    if (!panel || !el) return;
+
+    const fit = () => {
+      const style = getComputedStyle(el);
+      let size = fitFontSize({
+        requested: fontSize,
+        available: { width: panel.clientWidth, height: panel.clientHeight },
+        content: { width: el.offsetWidth, height: el.offsetHeight },
+        padding: {
+          x: parseFloat(style.paddingLeft) + parseFloat(style.paddingRight),
+          y: parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
+        },
+        renderedFont: parseFloat(style.fontSize),
+      });
+      // A conta acima é uma proporção, e o texto não escala exatamente assim em tamanhos
+      // pequenos (arredondamento dos glifos). Por isso confere com a arte real e desce 0,1px
+      // até caber. Escreve direto no estilo para a medida ser da fonte testada.
+      for (let attempt = 0; attempt < MAX_FIT_ATTEMPTS && size > MIN_FONT_SIZE; attempt++) {
+        el.style.fontSize = `${size}px`;
+        if (el.offsetWidth <= panel.clientWidth && el.offsetHeight <= panel.clientHeight) break;
+        size = Math.max(MIN_FONT_SIZE, Math.floor((size - 0.1) * 10) / 10);
+      }
+      el.style.fontSize = `${size}px`;
+      setFittedFont(size);
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [fontSize, width, height, characters]);
+
+  // Quadro atual sem o efeito do ponteiro (usado por Copy e Export)
   const snapshot = () => renderAscii(toPatternTime(timeRef.current), {
     patternName: currentPattern,
     scale, speed, width, height, density, characters,
@@ -138,16 +182,17 @@ const PatternGenerator = () => {
     setTextThickness(DEFAULTS.textThickness);
   };
 
-  const handleMouseMove = (e: MouseEvent<HTMLPreElement>) => {
-    mouseRef.current.x = e.clientX;
-    mouseRef.current.y = e.clientY;
-    if (!isAnimating && mouseRef.current.down) {
+  // Mouse e toque usam o mesmo evento: com pointer events, arrastar o dedo na arte também funciona
+  const handlePointerMove = (e: PointerEvent<HTMLPreElement>) => {
+    pointerRef.current.x = e.clientX;
+    pointerRef.current.y = e.clientY;
+    if (!isAnimating && pointerRef.current.down) {
       renderFrameRef.current?.();
     }
   };
 
-  const handleMouseDown = (down: boolean) => {
-    mouseRef.current.down = down;
+  const setPointerDown = (down: boolean) => {
+    pointerRef.current.down = down;
     if (!isAnimating) {
       renderFrameRef.current?.();
     }
@@ -160,15 +205,21 @@ const PatternGenerator = () => {
         <div className="control-group">
           <h3>/EFFECTS</h3>
           <ul className="pattern-list">
-            {(Object.keys(patterns) as PatternName[]).map(name => (
-              <li
-                key={name}
-                className={`pattern-list-item ${currentPattern === name ? 'active' : ''}`}
-                onClick={() => setCurrentPattern(name)}
-              >
-                [{currentPattern === name ? '*' : ' '}] {name.toUpperCase()}
-              </li>
-            ))}
+            {(Object.keys(patterns) as PatternName[]).map(name => {
+              const active = currentPattern === name;
+              return (
+                <li key={name} className="pattern-list-item">
+                  <button
+                    type="button"
+                    className={`pattern-button${active ? ' active' : ''}`}
+                    aria-pressed={active}
+                    onClick={() => setCurrentPattern(name)}
+                  >
+                    [{active ? '*' : ' '}] {name.toUpperCase()}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -199,12 +250,17 @@ const PatternGenerator = () => {
         </div>
 
         <div className="control-group">
-          <Slider label="Font Size" value={fontSize} min={8} max={24} onChange={setFontSize} />
+          <Slider
+            label="Font Size" value={fontSize} min={8} max={24}
+            display={fittedFont < fontSize ? `${fittedFont.toFixed(1)} (ajustado)` : undefined}
+            onChange={setFontSize}
+          />
         </div>
 
         <div className="control-group character-set-group">
-          <label>Character Set:</label>
+          <label htmlFor="character-set">Character Set:</label>
           <select
+            id="character-set"
             value={characterPreset}
             className="select-field"
             onChange={(e) => {
@@ -228,6 +284,7 @@ const PatternGenerator = () => {
           </select>
           <input
             type="text"
+            aria-label="Caracteres personalizados"
             value={characters}
             className="input-field"
             onChange={(e) => {
@@ -247,6 +304,7 @@ const PatternGenerator = () => {
             <>
               <input
                 type="text"
+                aria-label="Texto para o Text Mode"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value.toUpperCase())}
                 placeholder="Your text..."
@@ -270,13 +328,16 @@ const PatternGenerator = () => {
             <input type="checkbox" checked={mouseInteraction} onChange={(e) => setMouseInteraction(e.target.checked)} />
             Mouse Interaction
           </label>
+          {mouseInteraction && (
+            <p className="notice">Segure o clique (ou arraste o dedo) sobre a arte.</p>
+          )}
         </div>
 
         <div className="control-group">
-          <label>Background Color:</label>
-          <input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="input-field" />
-          <label>Text Color:</label>
-          <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="input-field" />
+          <label htmlFor="background-color">Background Color:</label>
+          <input id="background-color" type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="input-field" />
+          <label htmlFor="text-color">Text Color:</label>
+          <input id="text-color" type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="input-field" />
         </div>
 
         <button onClick={copyToClipboard} className="button">Copy</button>
@@ -285,19 +346,27 @@ const PatternGenerator = () => {
         {notice && <p className="notice" role="status">{notice.message}</p>}
       </div>
 
-      {/* Área de Visualização */}
-      <div className="preview-panel" style={{ backgroundColor }}>
+      {/* Área de Visualização. A arte é decorativa para leitores de tela; o role descreve o padrão */}
+      <div
+        ref={panelRef}
+        className="preview-panel"
+        role="img"
+        aria-label={`Arte ASCII: ${currentPattern}`}
+        style={{ backgroundColor }}
+      >
         <pre
           ref={containerRef}
+          aria-hidden="true"
           className="ascii-art"
           style={{
-            fontSize: `${fontSize}px`,
+            fontSize: `${fittedFont}px`,
             color: textColor,
           }}
-          onMouseMove={handleMouseMove}
-          onMouseDown={() => handleMouseDown(true)}
-          onMouseUp={() => handleMouseDown(false)}
-          onMouseLeave={() => handleMouseDown(false)}
+          onPointerMove={handlePointerMove}
+          onPointerDown={() => setPointerDown(true)}
+          onPointerUp={() => setPointerDown(false)}
+          onPointerLeave={() => setPointerDown(false)}
+          onPointerCancel={() => setPointerDown(false)}
         />
       </div>
     </div>

@@ -5,9 +5,16 @@ body {
   color: #333;
 }
 
+/* Foco visível para teclado em todos os controles */
+:focus-visible {
+  outline: 2px solid #333;
+  outline-offset: 2px;
+}
+
 .app-container {
   display: flex;
   height: 100vh;
+  height: 100dvh;
 }
 
 .controls-panel {
@@ -38,10 +45,23 @@ body {
 
 .pattern-list-item {
   margin-bottom: 8px;
+}
+
+/* Botão com aparência de texto: a lista continua usável com teclado */
+.pattern-button {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-.pattern-list-item.active {
+.pattern-button.active {
   font-weight: bold;
 }
 
@@ -115,9 +135,8 @@ body {
 .preview-panel {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  /* Quando a arte não cabe mesmo com o encaixe, o painel rola em vez de cortar */
+  overflow: auto;
 }
 
 .ascii-art {
@@ -127,7 +146,10 @@ body {
   letter-spacing: 0.05em;
   user-select: none;
   cursor: crosshair;
-  margin: 0;
+  /* Em toque, o arrasto sobre a arte é do efeito, não da rolagem da página */
+  touch-action: none;
+  /* margin: auto centraliza sem cortar o início quando a arte é maior que o painel */
+  margin: auto;
   padding: 20px;
   color: #333;
   background-color: #F0EEE6;
@@ -169,4 +191,30 @@ body {
 .notice {
   font-size: 12px;
   margin: 0 0 10px;
+}
+
+/* Celular e tela estreita: controles embaixo da arte, em vez de uma coluna lateral */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .preview-panel {
+    order: -1;
+    flex: none;
+    height: 60vh;
+    height: 60dvh;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .controls-panel {
+    width: auto;
+    border-right: none;
+    border-top: 1px solid #ddd;
+    overflow: visible;
+  }
 }
