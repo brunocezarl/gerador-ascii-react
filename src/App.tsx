@@ -187,19 +187,19 @@ const PatternGenerator = () => {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(renderText(timeRef.current));
-      showNotice('Pattern copiado para a área de transferência!');
+      showNotice('Pattern copied to the clipboard!');
     } catch {
       // Sem contexto seguro (ex.: HTTP) o navegador bloqueia a área de transferência
-      showNotice('Não foi possível copiar. Use Export para salvar o arquivo.');
+      showNotice("Couldn't copy. Use Export to save the file instead.");
     }
   };
 
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      showNotice('Link copiado! Ele abre com esta configuração.');
+      showNotice('Link copied! It opens with this setup.');
     } catch {
-      showNotice('Não foi possível copiar o link. Copie a URL da barra de endereço.');
+      showNotice("Couldn't copy the link. Copy the URL from the address bar.");
     }
   };
 
@@ -220,7 +220,7 @@ const PatternGenerator = () => {
     drawGrid(canvas, lines, style, scaleFactor);
     canvas.toBlob((blob) => {
       if (blob) downloadBlob(blob, `${fileBase()}.png`);
-      else showNotice('Não foi possível gerar o PNG.');
+      else showNotice("Couldn't generate the PNG.");
     }, 'image/png');
   };
 
@@ -228,7 +228,7 @@ const PatternGenerator = () => {
   const exportVideo = async () => {
     const mimeType = pickVideoMimeType();
     if (!mimeType) {
-      showNotice('Este navegador não permite gravar vídeo.');
+      showNotice("This browser can't record video.");
       return;
     }
     const style = exportStyle();
@@ -244,7 +244,7 @@ const PatternGenerator = () => {
       });
       downloadBlob(blob, `${fileBase()}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`);
     } catch {
-      showNotice('Não foi possível gravar o vídeo.');
+      showNotice("Couldn't record the video.");
     } finally {
       setRecording(false);
     }
@@ -256,9 +256,9 @@ const PatternGenerator = () => {
     const next = { ...savedPresets, [name]: encodeSettings(settings) };
     if (writeSavedPresets(browserStorage(), next)) {
       setSavedPresets(next);
-      showNotice(`Preset "${name}" salvo.`);
+      showNotice(`Preset "${name}" saved.`);
     } else {
-      showNotice('Não foi possível salvar o preset neste navegador.');
+      showNotice("Couldn't save the preset in this browser.");
     }
   };
 
@@ -334,7 +334,7 @@ const PatternGenerator = () => {
             })}
           </ul>
           <button type="button" className="button-secondary compact" onClick={randomize}>
-            Aleatorizar
+            Randomize
           </button>
         </div>
 
@@ -367,7 +367,7 @@ const PatternGenerator = () => {
         <div className="control-group">
           <Slider
             label="Font Size" value={fontSize} {...SLIDER.fontSize}
-            display={fittedFont < fontSize ? `${fittedFont.toFixed(1)} (ajustado)` : undefined}
+            display={fittedFont < fontSize ? `${fittedFont.toFixed(1)} (fitted)` : undefined}
             onChange={(v) => update({ fontSize: v })}
           />
         </div>
@@ -398,7 +398,7 @@ const PatternGenerator = () => {
           </select>
           <input
             type="text"
-            aria-label="Caracteres personalizados"
+            aria-label="Custom characters"
             value={characters}
             className="input-field"
             onChange={(e) => update({ customCharacters: e.target.value, characterSet: 'custom' })}
@@ -415,14 +415,14 @@ const PatternGenerator = () => {
             <>
               <input
                 type="text"
-                aria-label="Texto para o Text Mode"
+                aria-label="Text Mode text"
                 value={textInput}
                 onChange={(e) => update({ textInput: e.target.value.toUpperCase() })}
                 placeholder="Your text..."
                 className="input-field"
               />
               {unsupportedChars.length > 0 && (
-                <p className="notice">Sem desenho, ignorados: {unsupportedChars.join(' ')}</p>
+                <p className="notice">Not drawable, skipped: {unsupportedChars.join(' ')}</p>
               )}
               <Slider label="Text Size" value={textScale} {...SLIDER.textScale} onChange={(v) => update({ textScale: v })} />
               <Slider label="Thickness" value={textThickness} {...SLIDER.textThickness} onChange={(v) => update({ textThickness: v })} />
@@ -436,11 +436,11 @@ const PatternGenerator = () => {
             Animate
           </label>
           {!isAnimating && (
-            <div className="step-row" role="group" aria-label="Passo a passo">
-              <button type="button" className="button-secondary" aria-label="Frame anterior" onClick={() => stepFrame(-1)}>
+            <div className="step-row" role="group" aria-label="Step through frames">
+              <button type="button" className="button-secondary" aria-label="Previous frame" onClick={() => stepFrame(-1)}>
                 ◀ Frame
               </button>
-              <button type="button" className="button-secondary" aria-label="Próximo frame" onClick={() => stepFrame(1)}>
+              <button type="button" className="button-secondary" aria-label="Next frame" onClick={() => stepFrame(1)}>
                 Frame ▶
               </button>
             </div>
@@ -450,12 +450,12 @@ const PatternGenerator = () => {
             Mouse Interaction
           </label>
           {mouseInteraction && (
-            <p className="notice">Segure o clique (ou arraste o dedo) sobre a arte.</p>
+            <p className="notice">Hold the mouse button (or drag your finger) over the art.</p>
           )}
         </div>
 
         <div className="control-group stacked-group">
-          <label htmlFor="palette">Paleta:</label>
+          <label htmlFor="palette">Palette:</label>
           <select
             id="palette"
             value={paletteId}
@@ -463,7 +463,7 @@ const PatternGenerator = () => {
             onChange={(e) => choosePalette(e.target.value)}
           >
             {palettes.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-            <option value="custom" disabled>Personalizada</option>
+            <option value="custom" disabled>Custom</option>
           </select>
           <label htmlFor="background-color">Background Color:</label>
           <input id="background-color" type="color" value={backgroundColor} onChange={(e) => update({ backgroundColor: e.target.value })} className="input-field" />
@@ -479,13 +479,13 @@ const PatternGenerator = () => {
         />
 
         <div className="control-group">
-          <h3>Compartilhar</h3>
+          <h3>Share</h3>
           <button onClick={copyToClipboard} className="button">Copy</button>
-          <button onClick={copyLink} className="button-secondary">Copiar link</button>
+          <button onClick={copyLink} className="button-secondary">Copy link</button>
         </div>
 
         <div className="control-group">
-          <h3>Exportar</h3>
+          <h3>Export</h3>
           <div className="button-row">
             <button onClick={exportText} className="button-secondary compact">.txt</button>
             <button onClick={exportSvg} className="button-secondary compact">.svg</button>
@@ -495,9 +495,9 @@ const PatternGenerator = () => {
             onClick={exportVideo}
             className="button-secondary"
             disabled={!videoSupported || recording}
-            title={videoSupported ? undefined : 'Este navegador não permite gravar vídeo'}
+            title={videoSupported ? undefined : "This browser can't record video"}
           >
-            {recording ? 'Gravando…' : `Vídeo (${VIDEO_SECONDS}s)`}
+            {recording ? 'Recording…' : `Video (${VIDEO_SECONDS}s)`}
           </button>
         </div>
 
@@ -510,7 +510,7 @@ const PatternGenerator = () => {
         ref={panelRef}
         className="preview-panel"
         role="img"
-        aria-label={`Arte ASCII: ${pattern}`}
+        aria-label={`ASCII art: ${pattern}`}
         style={{ backgroundColor }}
       >
         <pre

@@ -106,7 +106,7 @@ export const recordVideo = (
     };
     recorder.onerror = () => {
       finish();
-      reject(new Error('Falha na gravação'));
+      reject(new Error('Recording failed'));
     };
     recorder.onstop = () => {
       finish();

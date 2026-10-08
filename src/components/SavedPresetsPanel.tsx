@@ -26,18 +26,18 @@ const SavedPresetsPanel = ({ presets, onSave, onLoad, onDelete }: SavedPresetsPa
       >
         <input
           type="text"
-          aria-label="Nome do preset"
-          placeholder="Nome do preset"
+          aria-label="Preset name"
+          placeholder="Preset name"
           maxLength={MAX_PRESET_NAME}
           value={name}
           className="input-field"
           onChange={(e) => setName(e.target.value)}
         />
-        <button type="submit" className="button-secondary" disabled={!name.trim()}>Salvar preset</button>
+        <button type="submit" className="button-secondary" disabled={!name.trim()}>Save preset</button>
       </form>
 
       {names.length === 0 ? (
-        <p className="notice">Nenhum preset salvo neste navegador.</p>
+        <p className="notice">No presets saved in this browser.</p>
       ) : (
         <ul className="saved-list">
           {names.map((presetName) => (
@@ -48,7 +48,7 @@ const SavedPresetsPanel = ({ presets, onSave, onLoad, onDelete }: SavedPresetsPa
               <button
                 type="button"
                 className="icon-button"
-                aria-label={`Excluir preset ${presetName}`}
+                aria-label={`Delete preset ${presetName}`}
                 onClick={() => onDelete(presetName)}
               >
                 ×

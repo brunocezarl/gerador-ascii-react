@@ -25,7 +25,7 @@ describe('palettes', () => {
 
 describe('findPaletteId', () => {
   it('acha a paleta pelas cores, sem diferenciar maiúsculas', () => {
-    expect(findPaletteId('#0B1020', '#7DD3FC')).toBe('noite');
+    expect(findPaletteId('#0B1020', '#7DD3FC')).toBe('night');
   });
 
   it('devolve "custom" quando as cores não batem com nenhuma paleta', () => {

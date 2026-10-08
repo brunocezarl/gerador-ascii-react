@@ -1,102 +1,103 @@
-# Gerador ASCII
+# ASCII Generator
 
-Gerador de patterns ASCII animados que roda no navegador. Escolha um efeito, um set de caracteres e uma paleta, ajuste a grade e exporte o resultado como texto, imagem, SVG ou vídeo.
+An in-browser generator of animated ASCII patterns. Pick an effect, a character set and a palette, adjust the grid, and export the result as text, image, SVG or video.
 
-## Recursos
+## Features
 
-- **16 patterns** animados, de ondas e espirais a padrões inspirados em Almir Mavignier e na proporção áurea.
-- **10 sets de caracteres** (blocos, pontos, braille, geométricos...) e um set personalizado.
-- **Text Mode:** desenha um texto dentro da arte. Aceita letras acentuadas do português (Ç, Ã, É...). Caracteres sem desenho aparecem listados na interface.
-- **Interação com o mouse ou o toque:** segure o clique (ou arraste o dedo) sobre a arte para distorcê-la.
-- **Passo a passo:** com a animação pausada, avance ou volte um frame.
-- **Paletas:** nove pares de fundo e texto, com contraste verificado. Cores próprias também são aceitas.
-- **Aleatorizar:** sorteia padrão, caracteres, paleta e valores dos sliders.
-- **Presets salvos:** guarde configurações com um nome. Ficam neste navegador.
-- **Compartilhar:** a configuração fica na URL. O botão "Copiar link" copia o endereço atual.
-- **Exportar:** `.txt`, `.svg` (vetorial, com cores), `.png` (2x) e vídeo de 6 segundos (WebM ou MP4, conforme o navegador).
-- **Responsivo:** em celular, a arte fica no topo e os controles embaixo. A fonte diminui sozinha quando a grade não cabe no painel.
+- **16 animated patterns**, from waves and spirals to patterns inspired by Almir Mavignier and the golden ratio.
+- **10 character sets** (blocks, dots, braille, geometric...) plus a custom set.
+- **Text Mode:** draws text inside the art. Accented letters are supported (Ç, Ã, É...). Characters without a drawing are listed in the interface.
+- **Mouse or touch interaction:** hold the mouse button (or drag your finger) over the art to distort it.
+- **Frame stepping:** with the animation paused, move one frame forward or back.
+- **Palettes:** nine background and text pairs, with checked contrast. Custom colors are accepted too.
+- **Randomize:** picks a pattern, character set, palette and slider values.
+- **Saved presets:** keep configurations under a name. They stay in this browser.
+- **Share:** the configuration lives in the URL. The "Copy link" button copies the current address.
+- **Export:** `.txt`, `.svg` (vector, with colors), `.png` (2x), and a 6-second video (WebM or MP4, depending on the browser).
+- **Responsive:** on phones, the art is on top and the controls below. The font shrinks on its own when the grid doesn't fit the panel.
 
-## Como rodar
+## Getting started
 
-Requisitos: Node.js 22.13 ou mais recente (exigido pelo ESLint 10 e pelo Vitest 5).
+Requirements: Node.js 22.13 or newer (required by ESLint 10 and Vitest 5).
 
 ```bash
 npm install
-npm run dev       # servidor de desenvolvimento
+npm run dev       # development server
 ```
 
-Outros comandos:
+Other commands:
 
-| Comando | O que faz |
+| Command | What it does |
 | --- | --- |
-| `npm run build` | Checa os tipos e gera a versão de produção em `dist/` |
-| `npm run preview` | Serve a versão gerada pelo `build` |
-| `npm test` | Roda os testes unitários (Vitest) |
-| `npm run lint` | Roda o ESLint |
+| `npm run build` | Type-checks and builds the production version into `dist/` |
+| `npm run preview` | Serves the build output |
+| `npm test` | Runs the unit tests (Vitest) |
+| `npm run lint` | Runs ESLint |
 
-## Compartilhar uma configuração
+## Sharing a configuration
 
-Os parâmetros da URL só aparecem quando o valor difere do padrão. Um link sem mudanças fica limpo.
+URL parameters only appear when the value differs from the default. A link with no changes stays clean.
 
-| Parâmetro | Valores | Campo |
+| Parameter | Values | Setting |
 | --- | --- | --- |
-| `pattern` | nome de um dos 16 patterns, ex.: `golden_petals` | padrão |
-| `speed` | 1 a 20 | velocidade |
-| `density` | 0.1 a 2 (passo 0.1) | densidade |
-| `scale` | 0.05 a 1 (passo 0.05) | escala |
-| `width` / `height` | 20 a 120 / 10 a 60 | tamanho da grade |
-| `font` | 8 a 24 | tamanho da fonte (pode diminuir sozinho para caber) |
-| `chars` | `blocks`, `dots`, `circles`, `squares`, `lines`, `gradients`, `minimal`, `ascii`, `braille`, `geometric` ou `custom` | set de caracteres |
-| `custom` | até 200 caracteres (só com `chars=custom`) | caracteres personalizados |
-| `bg` / `fg` | cor hexadecimal sem `#`, ex.: `0d0221` | fundo e texto |
-| `animate` | `1` ou `0` | animação ligada |
-| `mouse` | `1` ou `0` | interação com o mouse |
-| `textmode` | `1` ou `0` | Text Mode |
-| `text` | até 40 caracteres (vira maiúsculas) | texto do Text Mode |
-| `textsize` | 4 a 15 | tamanho do texto |
-| `thickness` | 1 a 8 | espessura do traço |
+| `pattern` | one of the 16 pattern names, e.g. `golden_petals` | pattern |
+| `speed` | 1 to 20 | speed |
+| `density` | 0.1 to 2 (step 0.1) | density |
+| `scale` | 0.05 to 1 (step 0.05) | scale |
+| `width` / `height` | 20 to 120 / 10 to 60 | grid size |
+| `font` | 8 to 24 | font size (may shrink on its own to fit) |
+| `chars` | `blocks`, `dots`, `circles`, `squares`, `lines`, `gradients`, `minimal`, `ascii`, `braille`, `geometric` or `custom` | character set |
+| `custom` | up to 200 characters (only with `chars=custom`) | custom characters |
+| `bg` / `fg` | hex color without `#`, e.g. `0d0221` | background and text |
+| `animate` | `1` or `0` | animation on |
+| `mouse` | `1` or `0` | mouse interaction |
+| `textmode` | `1` or `0` | Text Mode |
+| `text` | up to 40 characters (converted to uppercase) | Text Mode text |
+| `textsize` | 4 to 15 | text size |
+| `thickness` | 1 to 8 | stroke thickness |
 
-Valores inválidos são ignorados, e números fora do intervalo são ajustados para o limite mais próximo.
+Invalid values are ignored, and numbers outside the range are clamped to the nearest limit.
 
-Exemplo: `http://localhost:5173/?pattern=golden_petals&speed=7&bg=0d0221&fg=ff2e88`
+Example: `http://localhost:5173/?pattern=golden_petals&speed=7&bg=0d0221&fg=ff2e88`
 
-## Presets salvos
+## Saved presets
 
-Os presets ficam no `localStorage` do navegador, na chave `gerador-ascii:presets`. Não há sincronização entre dispositivos. Para levar um preset a outro lugar, use o link.
+Presets are stored in the browser's `localStorage` under the key `gerador-ascii:presets`. They don't sync between devices. To move a preset elsewhere, share the link.
 
-## Estrutura
+## Project structure
 
 ```
 src/
-├── App.tsx              # Tela principal: estado, efeitos e interface
+├── App.tsx              # Main screen: state, effects and interface
 ├── App.css
-├── main.tsx             # Ponto de entrada
-├── patterns.ts          # Os 16 patterns (funções de valor por célula)
-├── renderAscii.ts       # Converte o valor de cada célula em caractere
-├── presets.ts           # Sets de caracteres
-├── palettes.ts          # Paletas de fundo e texto
-├── settings.ts          # Configuração completa, limites dos sliders e codificação da URL
-├── randomize.ts         # Aleatorizar
-├── savedPresets.ts      # Presets salvos no navegador
-├── textMask.ts          # Máscara do Text Mode (fonte vetorial, acentos)
-├── strokeFont.ts        # Desenho das letras e números
-├── fit.ts               # Encaixe da fonte no painel
-├── animation.ts         # Relógio da animação e passo a passo
-├── exporter.ts          # SVG, PNG, vídeo e download
+├── main.tsx             # Entry point
+├── patterns.ts          # The 16 patterns (value functions per cell)
+├── renderAscii.ts       # Turns each cell's value into a character
+├── pointer.ts           # Maps the mouse or touch position to grid cells
+├── presets.ts           # Character sets
+├── palettes.ts          # Background and text palettes
+├── settings.ts          # Full configuration, slider limits and URL encoding
+├── randomize.ts         # Randomize
+├── savedPresets.ts      # Presets saved in the browser
+├── textMask.ts          # Text Mode mask (vector font, accents)
+├── strokeFont.ts        # Letter and digit drawings
+├── fit.ts               # Fitting the font to the panel
+├── animation.ts         # Animation clock and frame stepping
+├── exporter.ts          # SVG, PNG, video and download
 └── components/
     ├── Slider.tsx
     └── SavedPresetsPanel.tsx
 ```
 
-Os módulos de lógica não dependem do React, e os que têm comportamento testável têm um `.test.ts` ao lado. `presets.ts` e `strokeFont.ts` são só dados.
+Logic modules don't depend on React, and those with testable behavior have a `.test.ts` next to them. `presets.ts` and `strokeFont.ts` are data only.
 
 ## Stack
 
-React 18, TypeScript, Vite 8 (com o plugin do React 6), Vitest 5 e ESLint 10.
+React 18, TypeScript, Vite 8 (with the React plugin 6), Vitest 5 and ESLint 10.
 
-## Limitações
+## Limitations
 
-- **Vídeo:** depende de `MediaRecorder` e de `canvas.captureStream`. Em navegadores que não suportam, o botão fica desabilitado. A gravação leva os 6 segundos reais.
-- **Copiar:** o clipboard exige contexto seguro (HTTPS ou `localhost`). Sem ele, o app mostra uma mensagem e você pode usar a exportação.
-- **Acentos no Text Mode:** cobrem agudo, grave, circunflexo, til, trema e cedilha. Outros caracteres aparecem na lista de "ignorados".
-- **Fonte:** a arte usa `Courier New` (ou fallback monoespaçado). Outras fontes podem mudar a proporção do Text Mode.
+- **Video:** requires `MediaRecorder` and `canvas.captureStream`. Browsers without them disable the button. Recording takes the full 6 seconds.
+- **Copy:** the clipboard requires a secure context (HTTPS or `localhost`). Without one, the app shows a message, and you can use Export instead.
+- **Accents in Text Mode:** acute, grave, circumflex, tilde, diaeresis and cedilla are supported. Other characters appear in the "skipped" list.
+- **Font:** the art uses `Courier New` (or a monospace fallback). Other fonts can change the proportions of Text Mode.
