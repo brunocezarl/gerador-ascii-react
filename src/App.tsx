@@ -10,6 +10,7 @@ import {
 import { fitFontSize, MIN_FONT_SIZE } from './fit';
 import { findPaletteId, palettes } from './palettes';
 import { patterns, type PatternName } from './patterns';
+import { paddingOf, pointerToGrid, type GridPointer } from './pointer';
 import { characterPresets, type CharacterSetName } from './presets';
 import { randomSettings } from './randomize';
 import { renderAscii } from './renderAscii';
@@ -90,14 +91,17 @@ const PatternGenerator = () => {
       const el = containerRef.current;
       if (!el) return;
 
-      // O rect é consultado uma vez por frame, fora do loop de células
-      let pointer: { x: number; y: number } | null = null;
+      // Rect e padding são lidos uma vez por frame, fora do loop de células
+      let pointer: GridPointer | null = null;
       if (mouseInteraction && pointerRef.current.down) {
-        const rect = el.getBoundingClientRect();
-        pointer = {
-          x: ((pointerRef.current.x - rect.left) / rect.width) * width,
-          y: ((pointerRef.current.y - rect.top) / rect.height) * height,
-        };
+        pointer = pointerToGrid(
+          pointerRef.current.x,
+          pointerRef.current.y,
+          el.getBoundingClientRect(),
+          paddingOf(getComputedStyle(el)),
+          width,
+          height
+        );
       }
 
       // Escreve direto no DOM, sem passar pelo render do React

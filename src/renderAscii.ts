@@ -1,4 +1,5 @@
 import { patterns, type PatternName, type PatternParams } from './patterns';
+import type { GridPointer } from './pointer';
 
 export interface RenderOptions {
   patternName: PatternName;
@@ -9,8 +10,20 @@ export interface RenderOptions {
   density: number;
   characters: string;
   textMask: Uint8Array | null;
-  mouse: { x: number; y: number } | null;
+  mouse: GridPointer | null;
 }
+
+// Quanto o ponteiro empurra o valor do pattern, no máximo
+const POINTER_STRENGTH = 0.5;
+
+// Efeito do ponteiro na célula (x, y). A célula é desenhada no centro (x + 0.5, y + 0.5).
+// A distância é medida na proporção da tela, então o efeito é um círculo e não uma elipse.
+export const pointerInfluence = (x: number, y: number, t: number, pointer: GridPointer): number => {
+  const dx = (x + 0.5 - pointer.x) * pointer.aspect;
+  const dy = y + 0.5 - pointer.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return Math.exp(-distance * 0.2) * Math.sin(t * 3) * POINTER_STRENGTH;
+};
 
 // Converte o valor de um pattern em caractere.
 // Valores fora de [-1, 1] são limitados: sem isso o Math.pow gera NaN para
@@ -38,11 +51,7 @@ export const renderAscii = (t: number, opts: RenderOptions): string => {
 
       // Interação com mouse
       if (mouse) {
-        const dx = x - mouse.x;
-        const dy = y - mouse.y;
-        const mouseDist = Math.sqrt(dx * dx + dy * dy);
-        const influence = Math.exp(-mouseDist * 0.2) * Math.sin(t * 3);
-        value += influence * 0.5;
+        value += pointerInfluence(x, y, t, mouse);
       }
 
       // Text Mode: o texto mostra o pattern animado, o fundo fica claro
